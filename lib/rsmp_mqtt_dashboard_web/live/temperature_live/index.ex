@@ -5,17 +5,17 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    reports = []
+    statuses = []
     emqtt_opts = Application.get_env(:rsmp_mqtt_dashboard, :emqtt)
     {:ok, pid} = :emqtt.start_link(emqtt_opts)
     {:ok, _} = :emqtt.connect(pid)
-    # Listen reports
-    {:ok, _, _} = :emqtt.subscribe(pid, "reports/#")
+    # Listen statuses
+    {:ok, _, _} = :emqtt.subscribe(pid, "status/#")
     {:ok, assign(socket,
-      reports: reports,
+      statuses: statuses,
       pid: pid,
       plot: nil,
-      interval: nil
+      plan: nil
     )}
   end
 
@@ -25,19 +25,19 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
   end
 
   @impl true
-  def handle_event("set-interval", %{"interval" => interval_s}, socket) do
-    case Integer.parse(interval_s) do
-      {interval, ""} ->
+  def handle_event("set-plan", %{"plan" => plan_s}, socket) do
+    case Integer.parse(plan_s) do
+      {plan, ""} ->
         id = Application.get_env(:rsmp_mqtt_dashboard, :sensor_id)
         # Send command to device
-        topic = "commands/#{id}/set_interval"
+        topic = "command/#{id}/plan"
         :ok = :emqtt.publish(
           socket.assigns[:pid],
           topic,
-          interval_s,
+          plan_s,
           retain: true
         )
-        {:noreply, assign(socket, interval: interval)}
+        {:noreply, assign(socket, plan: plan)}
       _ ->
         {:noreply, socket}
     end
@@ -53,33 +53,33 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     handle_publish(parse_topic(packet), packet, socket)
   end
 
-  defp handle_publish(["reports", id, "temperature"], %{payload: payload}, socket) do
+  defp handle_publish(["status", id, "main", "system", "temperature"], %{payload: payload}, socket) do
     if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
-      report = :erlang.binary_to_term(payload)
-      {reports, plot} = update_reports(report, socket)
-      {:noreply, assign(socket, reports: reports, plot: plot)}
+      status = :erlang.binary_to_term(payload)
+      {statuses, plot} = update_statuses(status, socket)
+      {:noreply, assign(socket, statuses: statuses, plot: plot)}
     else
       {:noreply, socket}
     end
   end
 
-  defp update_reports({ts, val}, socket) do
-    new_report = {DateTime.from_unix!(ts, :millisecond), val}
+  defp update_statuses({ts, val}, socket) do
+    new_status = {DateTime.from_unix!(ts, :millisecond), val}
     now = DateTime.utc_now()
     deadline = DateTime.add(DateTime.utc_now(), - 2 * Application.get_env(:rsmp_mqtt_dashboard, :timespan), :second)
-    reports =
-      [new_report | socket.assigns[:reports]]
+    statuses =
+      [new_status | socket.assigns[:statuses]]
       |> Enum.filter(fn {dt, _} -> DateTime.compare(dt, deadline) == :gt end)
       |> Enum.sort()
 
-    {reports, plot(reports, deadline, now)}
+    {statuses, plot(statuses, deadline, now)}
   end
 
   defp parse_topic(%{topic: topic}) do
     String.split(topic, "/", trim: true)
   end
 
-  defp plot(reports, deadline, now) do
+  defp plot(statuses, deadline, now) do
     x_scale =
       Contex.TimeScale.new()
       |> Contex.TimeScale.domain(deadline, now)
@@ -97,7 +97,7 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
       axis_label_rotation: 45
     ]
 
-    reports
+    statuses
     |> Enum.map(fn {dt, val} -> [dt, val] end)
     |> Contex.Dataset.new()
     |> Contex.Plot.new(Contex.LinePlot, 600, 250, options)
