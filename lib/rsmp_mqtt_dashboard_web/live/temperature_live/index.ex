@@ -11,6 +11,8 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     {:ok, _} = :emqtt.connect(pid)
     # Listen statuses
     {:ok, _, _} = :emqtt.subscribe(pid, "status/#")
+    {:ok, _, _} = :emqtt.subscribe(pid, "hello/+")
+    {:ok, _, _} = :emqtt.subscribe(pid, "died/+")
     {:ok, assign(socket,
       statuses: statuses,
       pid: pid,
@@ -51,6 +53,16 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
   @impl true
   def handle_info({:publish, packet}, socket) do
     handle_publish(parse_topic(packet), packet, socket)
+  end
+
+  defp handle_publish(["hello", id], %{payload: _payload}, socket) do
+    Logger.info("#{id} online")
+    {:noreply, socket}
+  end
+
+  defp handle_publish(["died", id], %{payload: _payload}, socket) do
+    Logger.info("#{id} offline")
+    {:noreply, socket}
   end
 
   defp handle_publish(["status", id, "main", "system", "temperature"], %{payload: payload}, socket) do
