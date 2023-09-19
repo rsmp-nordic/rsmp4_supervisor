@@ -32,11 +32,15 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
         id = Application.get_env(:rsmp_mqtt_dashboard, :sensor_id)
         # Send command to device
         topic = "command/#{id}/plan"
-        :ok = :emqtt.publish(
-          socket.assigns[:pid],
-          topic,
-          plan_s,
-          retain: true
+        properties = %{
+          'Response-Topic': "response/#{id}"
+        }
+        {:ok, pkt_id} = :emqtt.publish(
+          socket.assigns[:pid],   # Client
+          topic,                  # Topic
+          properties,             # Properties
+          plan_s,                 # Payload
+          [retain: false, qos: 1] # Opts
         )
         {:noreply, assign(socket, plan: plan)}
       _ ->
