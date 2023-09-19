@@ -9,9 +9,15 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     emqtt_opts = Application.get_env(:rsmp_mqtt_dashboard, :emqtt)
     {:ok, pid} = :emqtt.start_link(emqtt_opts)
     {:ok, _} = :emqtt.connect(pid)
-    # Listen statuses
+
+    # Subscribe to statuses
     {:ok, _, _} = :emqtt.subscribe(pid, "status/#")
     {:ok, _, _} = :emqtt.subscribe(pid, "state/+")
+
+    # Subscribe to our response topics
+    client_id = Application.get_env(:rsmp_mqtt_dashboard, :client_id)
+    {:ok, _, _} = :emqtt.subscribe(pid, "response/#{client_id}/command/#")
+
     {:ok, assign(socket,
       statuses: statuses,
       pid: pid,
@@ -29,11 +35,12 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
   def handle_event("set-plan", %{"plan" => plan_s}, socket) do
     case Integer.parse(plan_s) do
       {plan, ""} ->
-        id = Application.get_env(:rsmp_mqtt_dashboard, :sensor_id)
+        client_id = Application.get_env(:rsmp_mqtt_dashboard, :client_id)
+        device_id = Application.get_env(:rsmp_mqtt_dashboard, :sensor_id)
         # Send command to device
-        topic = "command/#{id}/plan"
+        topic = "command/#{device_id}/plan"
         properties = %{
-          'Response-Topic': "response/#{id}"
+          'Response-Topic': "response/#{client_id}/#{topic}"
         }
         {:ok, pkt_id} = :emqtt.publish(
           socket.assigns[:pid],   # Client
@@ -73,6 +80,16 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
       {:noreply, socket}
     end
   end
+
+
+  defp handle_publish(["response", _supervisor_id, "command", id, command], %{payload: payload}, socket) do
+    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
+      status = :erlang.binary_to_term(payload)
+      Logger.info("Response to command #{command}: #{status}")
+    end
+    {:noreply, socket}
+  end
+
 
   defp update_statuses({ts, val}, socket) do
     new_status = {DateTime.from_unix!(ts, :millisecond), val}

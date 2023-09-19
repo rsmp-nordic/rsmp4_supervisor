@@ -62,9 +62,12 @@ import_config "#{config_env()}.exs"
 
 
 config :rsmp_mqtt_dashboard, :emqtt,
-  host: '127.0.0.1'
+  host: '127.0.0.1',
+  proto_ver: :v5
 
+config :rsmp_mqtt_dashboard, :client_id, "supervisor_742c"
 config :rsmp_mqtt_dashboard, :sensor_id, "tlc_582a"
+
 
 # Period for chart
 config :rsmp_mqtt_dashboard, :timespan, 60
