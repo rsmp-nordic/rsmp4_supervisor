@@ -8,8 +8,7 @@ config :rsmp_mqtt_dashboard, RsmpMqttDashboardWeb.Endpoint,
   server: false
 
 # In test we don't send emails.
-config :rsmp_mqtt_dashboard, RsmpMqttDashboard.Mailer,
-  adapter: Swoosh.Adapters.Test
+config :rsmp_mqtt_dashboard, RsmpMqttDashboard.Mailer, adapter: Swoosh.Adapters.Test
 
 # Disable swoosh api client as it is only required for production adapters.
 config :swoosh, :api_client, false

@@ -69,7 +69,10 @@ defmodule RsmpMqttDashboardWeb.TemperatureLiveTest do
     test "deletes temperature in listing", %{conn: conn, temperature: temperature} do
       {:ok, index_live, _html} = live(conn, ~p"/temperatures")
 
-      assert index_live |> element("#temperatures-#{temperature.id} a", "Delete") |> render_click()
+      assert index_live
+             |> element("#temperatures-#{temperature.id} a", "Delete")
+             |> render_click()
+
       refute has_element?(index_live, "#temperatures-#{temperature.id}")
     end
   end

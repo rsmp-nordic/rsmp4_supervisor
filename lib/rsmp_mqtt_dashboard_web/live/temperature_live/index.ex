@@ -18,12 +18,13 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     client_id = Application.get_env(:rsmp_mqtt_dashboard, :client_id)
     {:ok, _, _} = :emqtt.subscribe(pid, "response/#{client_id}/command/#")
 
-    {:ok, assign(socket,
-      statuses: statuses,
-      pid: pid,
-      plot: nil,
-      plan: nil
-    )}
+    {:ok,
+     assign(socket,
+       statuses: statuses,
+       pid: pid,
+       plot: nil,
+       plan: nil
+     )}
   end
 
   @impl true
@@ -38,18 +39,34 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
         client_id = Application.get_env(:rsmp_mqtt_dashboard, :client_id)
         device_id = Application.get_env(:rsmp_mqtt_dashboard, :sensor_id)
         # Send command to device
-        topic = "command/#{device_id}/plan"
+        command = ~c"plan"
+        topic = "command/#{device_id}/#{command}"
+        command_id = SecureRandom.hex(2)
+
+        Logger.info("Sending '#{command}' command #{command_id}: Please switch to plan #{plan_s}")
+
         properties = %{
-          'Response-Topic': "response/#{client_id}/#{topic}"
+          "Response-Topic": "response/#{client_id}/#{topic}",
+          "Correlation-Data": command_id
         }
-        {:ok, pkt_id} = :emqtt.publish(
-          socket.assigns[:pid],   # Client
-          topic,                  # Topic
-          properties,             # Properties
-          plan_s,                 # Payload
-          [retain: false, qos: 1] # Opts
-        )
+
+        {:ok, pkt_id} =
+          :emqtt.publish(
+            # Client
+            socket.assigns[:pid],
+            # Topic
+            topic,
+            # Properties
+            properties,
+            # Payload
+            plan_s,
+            # Opts
+            retain: false,
+            qos: 1
+          )
+
         {:noreply, assign(socket, plan: plan)}
+
       _ ->
         {:noreply, socket}
     end
@@ -71,7 +88,11 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     {:noreply, socket}
   end
 
-  defp handle_publish(["status", id, "main", "system", "temperature"], %{payload: payload}, socket) do
+  defp handle_publish(
+         ["status", id, "main", "system", "temperature"],
+         %{payload: payload},
+         socket
+       ) do
     if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
       status = :erlang.binary_to_term(payload)
       {statuses, plot} = update_statuses(status, socket)
@@ -81,20 +102,31 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     end
   end
 
-
-  defp handle_publish(["response", _supervisor_id, "command", id, command], %{payload: payload}, socket) do
+  defp handle_publish(
+         ["response", _supervisor_id, "command", id, command],
+         %{payload: payload, properties: properties} = publish,
+         socket
+       ) do
     if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
       status = :erlang.binary_to_term(payload)
-      Logger.info("Response to command #{command}: #{status}")
+      command_id = properties[:"Correlation-Data"]
+      Logger.info("Received response to '#{command}' command #{command_id}: #{status}")
     end
+
     {:noreply, socket}
   end
-
 
   defp update_statuses({ts, val}, socket) do
     new_status = {DateTime.from_unix!(ts, :millisecond), val}
     now = DateTime.utc_now()
-    deadline = DateTime.add(DateTime.utc_now(), - 2 * Application.get_env(:rsmp_mqtt_dashboard, :timespan), :second)
+
+    deadline =
+      DateTime.add(
+        DateTime.utc_now(),
+        -2 * Application.get_env(:rsmp_mqtt_dashboard, :timespan),
+        :second
+      )
+
     statuses =
       [new_status | socket.assigns[:statuses]]
       |> Enum.filter(fn {dt, _} -> DateTime.compare(dt, deadline) == :gt end)
@@ -136,5 +168,4 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     datetime
     |> Calendar.strftime("%H:%M:%S")
   end
-
 end

@@ -46,9 +46,10 @@ defmodule RsmpMqttDashboard.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       {:cowlib, "~> 2.12.1", override: true},
-
+      {:secure_random, "~> 0.5"},
       {:emqtt, github: "emqx/emqtt", system_env: [{"BUILD_WITHOUT_QUIC", "1"}]},
-      {:contex, github: "mindok/contex"} # We will need this for SVG charts
+      # We will need this for SVG charts
+      {:contex, github: "mindok/contex"}
     ]
   end
 
