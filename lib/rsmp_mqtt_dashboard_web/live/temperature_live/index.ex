@@ -15,7 +15,7 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     {:ok, _, _} = :emqtt.subscribe(pid, "state/+")
 
     # Subscribe to our response topics
-    client_id = Application.get_env(:rsmp_mqtt_dashboard, :client_id)
+    client_id = emqtt_opts[:clientid]
     {:ok, _, _} = :emqtt.subscribe(pid, "response/#{client_id}/command/#")
 
     {:ok,
@@ -36,7 +36,8 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
   def handle_event("set-plan", %{"plan" => plan_s}, socket) do
     case Integer.parse(plan_s) do
       {plan, ""} ->
-        client_id = Application.get_env(:rsmp_mqtt_dashboard, :client_id)
+        emqtt_opts = Application.get_env(:rsmp_mqtt_dashboard, :emqtt)
+        client_id = emqtt_opts[:clientid]
         device_id = Application.get_env(:rsmp_mqtt_dashboard, :sensor_id)
         # Send command to device
         command = ~c"plan"
@@ -50,7 +51,7 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
           "Correlation-Data": command_id
         }
 
-        {:ok, pkt_id} =
+        {:ok, _pkt_id} =
           :emqtt.publish(
             # Client
             socket.assigns[:pid],
@@ -104,7 +105,7 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
 
   defp handle_publish(
          ["response", _supervisor_id, "command", id, command],
-         %{payload: payload, properties: properties} = publish,
+         %{payload: payload, properties: properties},
          socket
        ) do
     if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
