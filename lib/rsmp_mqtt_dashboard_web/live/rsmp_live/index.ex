@@ -113,26 +113,47 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
     if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
       status = :erlang.binary_to_term(payload)
       command_id = properties[:"Correlation-Data"]
-      Logger.info("Received response from #{id} to '#{command}' command #{command_id}: #{status}")
+      Logger.info("#{id}: Received response to '#{command}' command #{command_id}: #{status}")
     end
 
     {:noreply, socket}
   end
 
   defp handle_publish(
-         ["status", client_id, component, module, code],
+         ["status", id, component, module, code],
          %{payload: payload, properties: properties},
          socket
        ) do
-    if client_id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
+    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
       status = :erlang.binary_to_term(payload)
       #command_id = properties[:"Correlation-Data"]
-      Logger.info("Received status #{component}/#{module}/#{code} from #{client_id}: #{status}")
+      Logger.info("#{id}: Received status #{component}/#{module}/#{code}: #{status}")
     end
 
     {:noreply, socket}
   end
 
+  defp handle_publish(
+         ["status", id, "all"],
+         %{payload: payload, properties: properties},
+         socket
+       ) do
+    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
+      status = :erlang.binary_to_term(payload)
+      Logger.info("#{id}: Received all status: #{inspect(status)}")
+    end
+
+    {:noreply, socket}
+  end
+
+  # catch-all
+  defp handle_publish(
+         topic,
+         %{payload: payload, properties: properties},
+         socket
+       ) do
+    {:noreply, socket}
+  end
 
   defp parse_topic(%{topic: topic}) do
     String.split(topic, "/", trim: true)
