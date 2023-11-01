@@ -1,12 +1,13 @@
-<div>
-  <%= if @clients do %>
-    <%= @clients %>
+<h1>Clients</h1>
+<div id="clients" phx-update="append">
+  <%= for {client,state} <- @clients do %>
+    <p id="{client}" class={"state_#{state}"}><%= client %></p>
   <% end %>
 </div>
 
+<br>
 <div>
   <form phx-submit="set-plan">
-    <label for="plan">Plan</label>
     <input type="text" name="plan" value={@plan} />
     <input type="submit" value="Switch Plan" />
   </form>

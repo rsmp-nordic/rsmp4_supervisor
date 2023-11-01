@@ -94,17 +94,6 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
     {:noreply, assign(socket, clients: clients )}
   end
 
-  def render(assigns) do
-    ~L"""
-    <h1>Clients</h1>
-    <div id="clients" phx-update="append">
-      <%= for {client,state} <- @clients do %>
-        <p id="<%= client %>" class="state_<%= state %>"><%= client %></p>
-      <% end %>
-    </div>
-    """
-  end
-
   defp handle_publish(
          ["response", _supervisor_id, "command", id, command],
          %{payload: payload, properties: properties},
@@ -146,7 +135,7 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
     {:noreply, socket}
   end
 
-  # catch-all
+  # catch-all in case old retained messages are received from the broker
   defp handle_publish(
          topic,
          %{payload: payload, properties: properties},
