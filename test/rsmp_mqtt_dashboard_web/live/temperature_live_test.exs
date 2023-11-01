@@ -1,4 +1,4 @@
-defmodule RsmpMqttDashboardWeb.TemperatureLiveTest do
+defmodule RsmpMqttDashboardWeb.RsmpliveTest do
   use RsmpMqttDashboardWeb.ConnCase
 
   import Phoenix.LiveViewTest

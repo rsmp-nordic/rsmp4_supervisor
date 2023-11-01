@@ -17,6 +17,6 @@ defmodule RsmpMqttDashboardWeb.Router do
   scope "/", RsmpMqttDashboardWeb do
     pipe_through :browser
 
-    live "/", TemperatureLive.Index
+    live "/", Rsmplive.Index
   end
 end

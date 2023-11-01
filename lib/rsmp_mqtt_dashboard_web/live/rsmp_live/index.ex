@@ -1,4 +1,4 @@
-defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
+defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
   use RsmpMqttDashboardWeb, :live_view
 
   require Logger
@@ -22,7 +22,7 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
      assign(socket,
        statuses: statuses,
        pid: pid,
-       plot: nil,
+       clients: %{},
        plan: nil
      )}
   end
@@ -83,24 +83,26 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     handle_publish(parse_topic(packet), packet, socket)
   end
 
-  defp handle_publish(["state", id], %{payload: payload}, socket) do
-    state = :erlang.binary_to_term(payload)
-    Logger.info("#{id}: #{state}")
+  def handle_info({:disconnected, _, _}, socket) do
+    Logger.info("Disconnected")
     {:noreply, socket}
   end
 
-  defp handle_publish(
-         ["status", id, "main", "system", "temperature"],
-         %{payload: payload},
-         socket
-       ) do
-    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
-      status = :erlang.binary_to_term(payload)
-      {statuses, plot} = update_statuses(status, socket)
-      {:noreply, assign(socket, statuses: statuses, plot: plot)}
-    else
-      {:noreply, socket}
-    end
+  defp handle_publish(["state", id], %{payload: payload}, socket) do
+    state = :erlang.binary_to_term(payload)
+    clients = Map.put(socket.assigns.clients, id, state)
+    {:noreply, assign(socket, clients: clients )}
+  end
+
+  def render(assigns) do
+    ~L"""
+    <h1>Clients</h1>
+    <div id="clients" phx-update="append">
+      <%= for {client,state} <- @clients do %>
+        <p id="<%= client %>" class="state_<%= state %>"><%= client %></p>
+      <% end %>
+    </div>
+    """
   end
 
   defp handle_publish(
@@ -111,62 +113,14 @@ defmodule RsmpMqttDashboardWeb.TemperatureLive.Index do
     if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
       status = :erlang.binary_to_term(payload)
       command_id = properties[:"Correlation-Data"]
-      Logger.info("Received response to '#{command}' command #{command_id}: #{status}")
+      Logger.info("Received response from #{id} to '#{command}' command #{command_id}: #{status}")
     end
 
     {:noreply, socket}
-  end
-
-  defp update_statuses({ts, val}, socket) do
-    new_status = {DateTime.from_unix!(ts, :millisecond), val}
-    now = DateTime.utc_now()
-
-    deadline =
-      DateTime.add(
-        DateTime.utc_now(),
-        -2 * Application.get_env(:rsmp_mqtt_dashboard, :timespan),
-        :second
-      )
-
-    statuses =
-      [new_status | socket.assigns[:statuses]]
-      |> Enum.filter(fn {dt, _} -> DateTime.compare(dt, deadline) == :gt end)
-      |> Enum.sort()
-
-    {statuses, plot(statuses, deadline, now)}
   end
 
   defp parse_topic(%{topic: topic}) do
     String.split(topic, "/", trim: true)
   end
 
-  defp plot(statuses, deadline, now) do
-    x_scale =
-      Contex.TimeScale.new()
-      |> Contex.TimeScale.domain(deadline, now)
-      |> Contex.TimeScale.interval_count(10)
-
-    y_scale =
-      Contex.ContinuousLinearScale.new()
-      |> Contex.ContinuousLinearScale.domain(0, 30)
-
-    options = [
-      smoothed: false,
-      custom_x_scale: x_scale,
-      custom_y_scale: y_scale,
-      custom_x_formatter: &x_formatter/1,
-      axis_label_rotation: 45
-    ]
-
-    statuses
-    |> Enum.map(fn {dt, val} -> [dt, val] end)
-    |> Contex.Dataset.new()
-    |> Contex.Plot.new(Contex.LinePlot, 600, 250, options)
-    |> Contex.Plot.to_svg()
-  end
-
-  defp x_formatter(datetime) do
-    datetime
-    |> Calendar.strftime("%H:%M:%S")
-  end
 end

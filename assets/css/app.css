@@ -3,3 +3,16 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+
+h1 {
+	font-size: 1.5em;
+	font-weight: bold;
+}
+#clients p.state_0 {
+	color: #888;
+}
+
+
+#clients p.state_1:after {
+  content: " 🟢";
+}
