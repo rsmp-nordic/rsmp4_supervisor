@@ -119,6 +119,21 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
     {:noreply, socket}
   end
 
+  defp handle_publish(
+         ["status", client_id, component, module, code],
+         %{payload: payload, properties: properties},
+         socket
+       ) do
+    if client_id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
+      status = :erlang.binary_to_term(payload)
+      #command_id = properties[:"Correlation-Data"]
+      Logger.info("Received status #{component}/#{module}/#{code} from #{client_id}: #{status}")
+    end
+
+    {:noreply, socket}
+  end
+
+
   defp parse_topic(%{topic: topic}) do
     String.split(topic, "/", trim: true)
   end

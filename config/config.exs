@@ -69,3 +69,5 @@ config :rsmp_mqtt_dashboard, :sensor_id, "tlc_582a"
 
 # Period for chart
 config :rsmp_mqtt_dashboard, :timespan, 60
+
+config :logger, level: :info
