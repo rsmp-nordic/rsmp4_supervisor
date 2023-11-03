@@ -15,9 +15,11 @@ defmodule RsmpMqttDashboard.Application do
       # Start Finch
       {Finch, name: RsmpMqttDashboard.Finch},
       # Start the Endpoint (http/https)
-      RsmpMqttDashboardWeb.Endpoint
+      RsmpMqttDashboardWeb.Endpoint,
       # Start a worker by calling: RsmpMqttDashboard.Worker.start_link(arg)
       # {RsmpMqttDashboard.Worker, arg}
+      # Start our RSMP client
+      RSMP
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

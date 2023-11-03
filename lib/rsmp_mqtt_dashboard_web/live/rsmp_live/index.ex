@@ -5,31 +5,21 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    statuses = []
-    emqtt_opts = Application.get_env(:rsmp_mqtt_dashboard, :emqtt)
-    {:ok, pid} = :emqtt.start_link(emqtt_opts)
-    {:ok, _} = :emqtt.connect(pid)
+    Phoenix.PubSub.subscribe(RsmpMqttDashboard.PubSub, "clients")
+    Logger.info inspect(Process.whereis(RSMP)|>RSMP.clients())
+    clients = Process.whereis(RSMP) |> RSMP.clients()
 
-    # Subscribe to statuses
-    {:ok, _, _} = :emqtt.subscribe(pid, "status/#")
-    {:ok, _, _} = :emqtt.subscribe(pid, "state/+")
-
-    # Subscribe to our response topics
-    client_id = emqtt_opts[:clientid]
-    {:ok, _, _} = :emqtt.subscribe(pid, "response/#{client_id}/command/#")
-
-    {:ok,
-     assign(socket,
-       statuses: statuses,
-       pid: pid,
-       clients: %{},
-       plan: nil
-     )}
+    {:ok,assign(socket, clients: clients)}
   end
 
   @impl true
   def handle_params(_params, _url, socket) do
     {:noreply, socket}
+  end
+
+  @impl true
+  def handle_info(%{topic: "clients", clients: clients}, socket) do
+    {:noreply, assign(socket, clients: clients)}
   end
 
   @impl true
@@ -77,71 +67,4 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
     Logger.info("handle_event: #{inspect([name, data])}")
     {:noreply, socket}
   end
-
-  @impl true
-  def handle_info({:publish, packet}, socket) do
-    handle_publish(parse_topic(packet), packet, socket)
-  end
-
-  def handle_info({:disconnected, _, _}, socket) do
-    Logger.info("Disconnected")
-    {:noreply, socket}
-  end
-
-  defp handle_publish(["state", id], %{payload: payload}, socket) do
-    state = :erlang.binary_to_term(payload)
-    clients = Map.put(socket.assigns.clients, id, state)
-    {:noreply, assign(socket, clients: clients )}
-  end
-
-  defp handle_publish(
-         ["response", _supervisor_id, "command", id, command],
-         %{payload: payload, properties: properties},
-         socket
-       ) do
-    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
-      status = :erlang.binary_to_term(payload)
-      command_id = properties[:"Correlation-Data"]
-      Logger.info("#{id}: Received response to '#{command}' command #{command_id}: #{status}")
-    end
-
-    {:noreply, socket}
-  end
-
-  defp handle_publish(
-         ["status", id, component, module, code],
-         %{payload: payload, properties: _properties},
-         socket
-       ) do
-    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
-      status = :erlang.binary_to_term(payload)
-      #command_id = properties[:"Correlation-Data"]
-      Logger.info("#{id}: Received status #{component}/#{module}/#{code}: #{status}")
-    end
-
-    {:noreply, socket}
-  end
-
-  defp handle_publish(
-         ["status", id, "all"],
-         %{payload: payload, properties: _properties},
-         socket
-       ) do
-    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
-      status = :erlang.binary_to_term(payload)
-      Logger.info("#{id}: Received all status: #{inspect(status)}")
-    end
-
-    {:noreply, socket}
-  end
-
-  # catch-all in case old retained messages are received from the broker
-  defp handle_publish(_topic, %{payload: _payload, properties: _properties}, socket) do
-    {:noreply, socket}
-  end
-
-  defp parse_topic(%{topic: topic}) do
-    String.split(topic, "/", trim: true)
-  end
-
 end
