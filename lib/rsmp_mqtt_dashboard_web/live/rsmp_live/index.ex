@@ -110,7 +110,7 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
 
   defp handle_publish(
          ["status", id, component, module, code],
-         %{payload: payload, properties: properties},
+         %{payload: payload, properties: _properties},
          socket
        ) do
     if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
@@ -124,7 +124,7 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
 
   defp handle_publish(
          ["status", id, "all"],
-         %{payload: payload, properties: properties},
+         %{payload: payload, properties: _properties},
          socket
        ) do
     if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
@@ -136,11 +136,7 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
   end
 
   # catch-all in case old retained messages are received from the broker
-  defp handle_publish(
-         topic,
-         %{payload: payload, properties: properties},
-         socket
-       ) do
+  defp handle_publish(_topic, %{payload: _payload, properties: _properties}, socket) do
     {:noreply, socket}
   end
 
