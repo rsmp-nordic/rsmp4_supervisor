@@ -1,10 +1,7 @@
-# Rsmp
+# RSMP 4 Supervisor
 This is part of an experiment to see how RSMP 4 could be build on top of MQTT.
 
-
-This Phoenix web app receives data from an MQTT device (rsmp_mqtt) and graphs it.
-You can also send a command to the device.
-
+This Phoenix web app acts as an RSMP supervisor.
 
 ## Running
 The MQTT broker and the MQTT device (rsmp_mqtt) should be running (or you can start them afterwards)-
