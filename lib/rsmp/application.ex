@@ -1,4 +1,4 @@
-defmodule RsmpMqttDashboard.Application do
+defmodule Rsmp.Application do
   # See https://hexdocs.pm/elixir/Application.html
   # for more information on OTP Applications
   @moduledoc false
@@ -9,22 +9,22 @@ defmodule RsmpMqttDashboard.Application do
   def start(_type, _args) do
     children = [
       # Start the Telemetry supervisor
-      RsmpMqttDashboardWeb.Telemetry,
+      RsmpWeb.Telemetry,
       # Start the PubSub system
-      {Phoenix.PubSub, name: RsmpMqttDashboard.PubSub},
+      {Phoenix.PubSub, name: Rsmp.PubSub},
       # Start Finch
-      {Finch, name: RsmpMqttDashboard.Finch},
+      {Finch, name: Rsmp.Finch},
       # Start the Endpoint (http/https)
-      RsmpMqttDashboardWeb.Endpoint,
-      # Start a worker by calling: RsmpMqttDashboard.Worker.start_link(arg)
-      # {RsmpMqttDashboard.Worker, arg}
-      # Start our RSMP client
-      RSMP
+      RsmpWeb.Endpoint,
+      # Start a worker by calling: Rsmp.Worker.start_link(arg)
+      # {Rsmp.Worker, arg}
+      # Start our RSMP supervisor
+      RsmpSupervisor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: RsmpMqttDashboard.Supervisor]
+    opts = [strategy: :one_for_one, name: Rsmp.Supervisor]
     Supervisor.start_link(children, opts)
   end
 
@@ -32,7 +32,7 @@ defmodule RsmpMqttDashboard.Application do
   # whenever the application is updated.
   @impl true
   def config_change(changed, _new, removed) do
-    RsmpMqttDashboardWeb.Endpoint.config_change(changed, removed)
+    RsmpWeb.Endpoint.config_change(changed, removed)
     :ok
   end
 end

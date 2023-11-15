@@ -1,4 +1,4 @@
-defmodule RsmpMqttDashboardWeb.ErrorJSON do
+defmodule RsmpWeb.ErrorJSON do
   # If you want to customize a particular status code,
   # you may add your own clauses, such as:
   #

@@ -1,12 +1,12 @@
-defmodule RsmpMqttDashboardWeb.Endpoint do
-  use Phoenix.Endpoint, otp_app: :rsmp_mqtt_dashboard
+defmodule RsmpWeb.Endpoint do
+  use Phoenix.Endpoint, otp_app: :rsmp
 
   # The session will be stored in the cookie and signed,
   # this means its contents can be read but not tampered with.
   # Set :encryption_salt if you would also like to encrypt it.
   @session_options [
     store: :cookie,
-    key: "_rsmp_mqtt_dashboard_key",
+    key: "_rsmp_key",
     signing_salt: "KavY7D2r",
     same_site: "Lax"
   ]
@@ -19,9 +19,9 @@ defmodule RsmpMqttDashboardWeb.Endpoint do
   # when deploying your static files in production.
   plug Plug.Static,
     at: "/",
-    from: :rsmp_mqtt_dashboard,
+    from: :rsmp,
     gzip: false,
-    only: RsmpMqttDashboardWeb.static_paths()
+    only: RsmpWeb.static_paths()
 
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
@@ -42,5 +42,5 @@ defmodule RsmpMqttDashboardWeb.Endpoint do
   plug Plug.MethodOverride
   plug Plug.Head
   plug Plug.Session, @session_options
-  plug RsmpMqttDashboardWeb.Router
+  plug RsmpWeb.Router
 end

@@ -8,13 +8,13 @@
 import Config
 
 # Configures the endpoint
-config :rsmp_mqtt_dashboard, RsmpMqttDashboardWeb.Endpoint,
+config :rsmp, RsmpWeb.Endpoint,
   url: [host: "localhost"],
   render_errors: [
-    formats: [html: RsmpMqttDashboardWeb.ErrorHTML, json: RsmpMqttDashboardWeb.ErrorJSON],
+    formats: [html: RsmpWeb.ErrorHTML, json: RsmpWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: RsmpMqttDashboard.PubSub,
+  pubsub_server: Rsmp.PubSub,
   live_view: [signing_salt: "+BqAJ3a2"]
 
 # Configures the mailer
@@ -24,7 +24,7 @@ config :rsmp_mqtt_dashboard, RsmpMqttDashboardWeb.Endpoint,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :rsmp_mqtt_dashboard, RsmpMqttDashboard.Mailer, adapter: Swoosh.Adapters.Local
+config :rsmp, Rsmp.Mailer, adapter: Swoosh.Adapters.Local
 
 # Configure esbuild (the version is required)
 config :esbuild,
@@ -60,14 +60,14 @@ config :phoenix, :json_library, Jason
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
 
-config :rsmp_mqtt_dashboard, :emqtt,
+config :rsmp, :emqtt,
   host: ~c"127.0.0.1",
   clientid: "supervisor_742c",
   proto_ver: :v5
 
-config :rsmp_mqtt_dashboard, :sensor_id, "tlc_582a"
+config :rsmp, :sensor_id, "tlc_582a"
 
 # Period for chart
-config :rsmp_mqtt_dashboard, :timespan, 60
+config :rsmp, :timespan, 60
 
 config :logger, level: :info

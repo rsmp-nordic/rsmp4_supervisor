@@ -1,6 +1,6 @@
-defmodule RsmpMqttDashboard do
+defmodule Rsmp do
   @moduledoc """
-  RsmpMqttDashboard keeps the contexts that define your domain
+  Rsmp keeps the contexts that define your domain
   and business logic.
 
   Contexts are also responsible for managing your data, regardless

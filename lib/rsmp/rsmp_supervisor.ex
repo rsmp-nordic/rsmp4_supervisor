@@ -1,4 +1,4 @@
-defmodule RSMP do
+defmodule RsmpSupervisor do
   use GenServer
   require Logger
 
@@ -29,7 +29,7 @@ defmodule RSMP do
   @impl true
   def init(_rsmp) do
     statuses = []
-    emqtt_opts = Application.get_env(:rsmp_mqtt_dashboard, :emqtt)
+    emqtt_opts = Application.get_env(:rsmp, :emqtt)
     {:ok, pid} = :emqtt.start_link(emqtt_opts)
     {:ok, _} = :emqtt.connect(pid)
 
@@ -73,7 +73,7 @@ defmodule RSMP do
     client_state = :erlang.binary_to_term(payload)
     clients = Map.put(state.clients, id, client_state)
     data = %{topic: "clients", clients: clients}
-    Phoenix.PubSub.broadcast(RsmpMqttDashboard.PubSub, "clients", data)
+    Phoenix.PubSub.broadcast(Rsmp.PubSub, "clients", data)
     {:noreply, %{ state | clients: clients } }
   end
 
@@ -82,7 +82,7 @@ defmodule RSMP do
          %{payload: payload, properties: properties},
          state
        ) do
-    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
+    if id == Application.get_env(:rsmp, :sensor_id) do
       status = :erlang.binary_to_term(payload)
       command_id = properties[:"Correlation-Data"]
       Logger.info("#{id}: Received response to '#{command}' command #{command_id}: #{status}")
@@ -96,7 +96,7 @@ defmodule RSMP do
          %{payload: payload, properties: _properties},
          state
        ) do
-    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
+    if id == Application.get_env(:rsmp, :sensor_id) do
       status = :erlang.binary_to_term(payload)
       #command_id = properties[:"Correlation-Data"]
       Logger.info("#{id}: Received status #{component}/#{module}/#{code}: #{status}")
@@ -110,7 +110,7 @@ defmodule RSMP do
          %{payload: payload, properties: _properties},
          state
        ) do
-    if id == Application.get_env(:rsmp_mqtt_dashboard, :sensor_id) do
+    if id == Application.get_env(:rsmp, :sensor_id) do
       status = :erlang.binary_to_term(payload)
       Logger.info("#{id}: Received all status: #{inspect(status)}")
     end

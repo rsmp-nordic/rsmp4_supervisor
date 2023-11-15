@@ -1,4 +1,4 @@
-# RsmpMqttDashboard
+# Rsmp
 This is part of an experiment to see how RSMP 4 could be build on top of MQTT.
 
 

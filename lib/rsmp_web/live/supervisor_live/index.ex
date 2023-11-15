@@ -1,13 +1,14 @@
-defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
-  use RsmpMqttDashboardWeb, :live_view
+defmodule RsmpWeb.SupervisorLive.Index do
+  use RsmpWeb, :live_view
 
   require Logger
 
   @impl true
   def mount(_params, _session, socket) do
-    Phoenix.PubSub.subscribe(RsmpMqttDashboard.PubSub, "clients")
-    Logger.info inspect(Process.whereis(RSMP)|>RSMP.clients())
-    clients = Process.whereis(RSMP) |> RSMP.clients()
+    Phoenix.PubSub.subscribe(Rsmp.PubSub, "clients")
+    supervisor = Process.whereis(RsmpSupervisor)
+    clients = supervisor |> RsmpSupervisor.clients()
+    Logger.info inspect(clients)
 
     {:ok,assign(socket, clients: clients)}
   end
@@ -26,9 +27,9 @@ defmodule RsmpMqttDashboardWeb.Rsmplive.Index do
   def handle_event("set-plan", %{"plan" => plan_s}, socket) do
     case Integer.parse(plan_s) do
       {plan, ""} ->
-        emqtt_opts = Application.get_env(:rsmp_mqtt_dashboard, :emqtt)
+        emqtt_opts = Application.get_env(:rsmp, :emqtt)
         client_id = emqtt_opts[:clientid]
-        device_id = Application.get_env(:rsmp_mqtt_dashboard, :sensor_id)
+        device_id = Application.get_env(:rsmp, :sensor_id)
         # Send command to device
         command = ~c"plan"
         topic = "command/#{device_id}/#{command}"

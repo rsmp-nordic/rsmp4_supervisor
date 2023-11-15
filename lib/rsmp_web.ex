@@ -1,12 +1,12 @@
-defmodule RsmpMqttDashboardWeb do
+defmodule RsmpWeb do
   @moduledoc """
   The entrypoint for defining your web interface, such
   as controllers, components, channels, and so on.
 
   This can be used in your application as:
 
-      use RsmpMqttDashboardWeb, :controller
-      use RsmpMqttDashboardWeb, :html
+      use RsmpWeb, :controller
+      use RsmpWeb, :html
 
   The definitions below will be executed for every controller,
   component, etc, so keep them short and clean, focused
@@ -40,7 +40,7 @@ defmodule RsmpMqttDashboardWeb do
     quote do
       use Phoenix.Controller,
         formats: [:html, :json],
-        layouts: [html: RsmpMqttDashboardWeb.Layouts]
+        layouts: [html: RsmpWeb.Layouts]
 
       import Plug.Conn
 
@@ -51,7 +51,7 @@ defmodule RsmpMqttDashboardWeb do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {RsmpMqttDashboardWeb.Layouts, :app}
+        layout: {RsmpWeb.Layouts, :app}
 
       unquote(html_helpers())
     end
@@ -83,7 +83,7 @@ defmodule RsmpMqttDashboardWeb do
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components and translation
-      import RsmpMqttDashboardWeb.CoreComponents
+      import RsmpWeb.CoreComponents
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
@@ -96,9 +96,9 @@ defmodule RsmpMqttDashboardWeb do
   def verified_routes do
     quote do
       use Phoenix.VerifiedRoutes,
-        endpoint: RsmpMqttDashboardWeb.Endpoint,
-        router: RsmpMqttDashboardWeb.Router,
-        statics: RsmpMqttDashboardWeb.static_paths()
+        endpoint: RsmpWeb.Endpoint,
+        router: RsmpWeb.Router,
+        statics: RsmpWeb.static_paths()
     end
   end
 

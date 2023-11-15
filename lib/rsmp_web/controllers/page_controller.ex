@@ -1,5 +1,5 @@
-defmodule RsmpMqttDashboardWeb.PageController do
-  use RsmpMqttDashboardWeb, :controller
+defmodule RsmpWeb.PageController do
+  use RsmpWeb, :controller
 
   def home(conn, _params) do
     # The home page is often custom made,

@@ -1,8 +1,8 @@
-defmodule RsmpMqttDashboardWeb.RsmpliveTest do
-  use RsmpMqttDashboardWeb.ConnCase
+defmodule RsmpWeb.SupervisorLiveTest do
+  use RsmpWeb.ConnCase
 
   import Phoenix.LiveViewTest
-  import RsmpMqttDashboard.MeasurementsFixtures
+  import Rsmp.MeasurementsFixtures
 
   @create_attrs %{}
   @update_attrs %{}

@@ -1,5 +1,5 @@
-defmodule RsmpMqttDashboardWeb.PageControllerTest do
-  use RsmpMqttDashboardWeb.ConnCase
+defmodule RsmpWeb.PageControllerTest do
+  use RsmpWeb.ConnCase
 
   test "GET /", %{conn: conn} do
     conn = get(conn, ~p"/")
