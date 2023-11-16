@@ -15,9 +15,9 @@ defmodule RsmpSupervisor do
   # :pear
 
   def start_link(default) when is_list(default) do
-    {:ok,pid} = GenServer.start_link(__MODULE__, default)
+    {:ok, pid} = GenServer.start_link(__MODULE__, default)
     Process.register(pid, __MODULE__)
-    {:ok,pid}
+    {:ok, pid}
   end
 
   def clients(pid) do
@@ -47,6 +47,7 @@ defmodule RsmpSupervisor do
       clients: %{},
       plan: nil
     }
+
     {:ok, state}
   end
 
@@ -74,7 +75,7 @@ defmodule RsmpSupervisor do
     clients = Map.put(state.clients, id, client_state)
     data = %{topic: "clients", clients: clients}
     Phoenix.PubSub.broadcast(Rsmp.PubSub, "clients", data)
-    {:noreply, %{ state | clients: clients } }
+    {:noreply, %{state | clients: clients}}
   end
 
   defp handle_publish(
@@ -96,11 +97,9 @@ defmodule RsmpSupervisor do
          %{payload: payload, properties: _properties},
          state
        ) do
-    if id == Application.get_env(:rsmp, :sensor_id) do
-      status = :erlang.binary_to_term(payload)
-      #command_id = properties[:"Correlation-Data"]
-      Logger.info("#{id}: Received status #{component}/#{module}/#{code}: #{status}")
-    end
+    status = :erlang.binary_to_term(payload)
+    # command_id = properties[:"Correlation-Data"]
+    Logger.info("#{id}: Received status #{component}/#{module}/#{code}: #{status}")
 
     {:noreply, state}
   end
@@ -122,6 +121,4 @@ defmodule RsmpSupervisor do
   defp handle_publish(_topic, %{payload: _payload, properties: _properties}, state) do
     {:noreply, state}
   end
-
-
 end

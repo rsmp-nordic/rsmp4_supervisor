@@ -9,13 +9,13 @@ defmodule RsmpWeb.SupervisorLive.Index do
     supervisor = Process.whereis(RsmpSupervisor)
     clients = supervisor |> RsmpSupervisor.clients()
 
-    {:ok,assign(socket, clients: sort_clients(clients))}
+    {:ok, assign(socket, clients: sort_clients(clients))}
   end
 
   def sort_clients(clients) do
     clients
-    |> Map.to_list
-    |>Enum.sort_by(fn {client,state} -> {state==0,client} end, :asc)
+    |> Map.to_list()
+    |> Enum.sort_by(fn {client, state} -> {state == 0, client} end, :asc)
   end
 
   @impl true
