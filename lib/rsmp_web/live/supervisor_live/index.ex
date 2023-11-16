@@ -8,9 +8,14 @@ defmodule RsmpWeb.SupervisorLive.Index do
     Phoenix.PubSub.subscribe(Rsmp.PubSub, "clients")
     supervisor = Process.whereis(RsmpSupervisor)
     clients = supervisor |> RsmpSupervisor.clients()
-    Logger.info inspect(clients)
 
-    {:ok,assign(socket, clients: clients)}
+    {:ok,assign(socket, clients: sort_clients(clients))}
+  end
+
+  def sort_clients(clients) do
+    clients
+    |> Map.to_list
+    |>Enum.sort_by(fn {client,state} -> {state==0,client} end, :asc)
   end
 
   @impl true
@@ -20,7 +25,7 @@ defmodule RsmpWeb.SupervisorLive.Index do
 
   @impl true
   def handle_info(%{topic: "clients", clients: clients}, socket) do
-    {:noreply, assign(socket, clients: clients)}
+    {:noreply, assign(socket, clients: sort_clients(clients))}
   end
 
   @impl true
