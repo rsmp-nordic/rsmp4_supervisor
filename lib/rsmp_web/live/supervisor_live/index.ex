@@ -5,7 +5,7 @@ defmodule RsmpWeb.SupervisorLive.Index do
 
   @impl true
   def mount(_params, _session, socket) do
-    Phoenix.PubSub.subscribe(Rsmp.PubSub, "clients")
+    Phoenix.PubSub.subscribe(Rsmp.PubSub, "rsmp")
     supervisor = Process.whereis(RsmpSupervisor)
     clients = supervisor |> RsmpSupervisor.clients()
 
@@ -15,7 +15,7 @@ defmodule RsmpWeb.SupervisorLive.Index do
   def sort_clients(clients) do
     clients
     |> Map.to_list()
-    |> Enum.sort_by(fn {client, state} -> {state == 0, client} end, :asc)
+    |> Enum.sort_by(fn {_id, state} -> {state[:online] == false, state} end, :asc)
   end
 
   @impl true
@@ -25,6 +25,11 @@ defmodule RsmpWeb.SupervisorLive.Index do
 
   @impl true
   def handle_info(%{topic: "clients", clients: clients}, socket) do
+    {:noreply, assign(socket, clients: sort_clients(clients))}
+  end
+
+  @impl true
+  def handle_info(%{topic: "status", clients: clients}, socket) do
     {:noreply, assign(socket, clients: sort_clients(clients))}
   end
 
@@ -72,5 +77,26 @@ defmodule RsmpWeb.SupervisorLive.Index do
   def handle_event(name, data, socket) do
     Logger.info("handle_event: #{inspect([name, data])}")
     {:noreply, socket}
+  end
+
+  @impl true
+  def render(assigns) do
+    ~H"""
+    <h1>Clients</h1>
+    <div id="clients" phx-update="append">
+      <%= for {id,state} <- @clients do %>
+        <div id="{id}" class={if state[:online], do: "client online", else: "client offline"} }>
+          <p id="state">
+            <%= id %>
+          </p>
+          <%= for {path,status} <- state[:statuses] do %>
+            <p id="status">
+              <%= path %>: <%= status %>
+            </p>
+          <% end %>
+        </div>
+      <% end %>
+    </div>
+    """
   end
 end

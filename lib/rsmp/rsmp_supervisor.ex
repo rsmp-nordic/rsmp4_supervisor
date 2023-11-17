@@ -28,7 +28,6 @@ defmodule RsmpSupervisor do
 
   @impl true
   def init(_rsmp) do
-    statuses = []
     emqtt_opts = Application.get_env(:rsmp, :emqtt)
     {:ok, pid} = :emqtt.start_link(emqtt_opts)
     {:ok, _} = :emqtt.connect(pid)
@@ -42,10 +41,8 @@ defmodule RsmpSupervisor do
     {:ok, _, _} = :emqtt.subscribe(pid, "response/#{client_id}/command/#")
 
     state = %{
-      statuses: statuses,
       pid: pid,
-      clients: %{},
-      plan: nil
+      clients: %{}
     }
 
     {:ok, state}
@@ -70,14 +67,6 @@ defmodule RsmpSupervisor do
     {:noreply, state}
   end
 
-  defp handle_publish(["state", id], %{payload: payload}, state) do
-    client_state = :erlang.binary_to_term(payload)
-    clients = Map.put(state.clients, id, client_state)
-    data = %{topic: "clients", clients: clients}
-    Phoenix.PubSub.broadcast(Rsmp.PubSub, "clients", data)
-    {:noreply, %{state | clients: clients}}
-  end
-
   defp handle_publish(
          ["response", _supervisor_id, "command", id, command],
          %{payload: payload, properties: properties},
@@ -92,29 +81,40 @@ defmodule RsmpSupervisor do
     {:noreply, state}
   end
 
+  defp handle_publish(["state", id], %{payload: payload}, state) do
+    online = :erlang.binary_to_term(payload) == 1
+
+    client =
+      (state.clients[id] || %{statuses: %{}})
+      |> Map.put(:online, online)
+
+    clients = Map.put(state.clients, id, client)
+
+    Logger.info("#{id}: Online: #{online}")
+    data = %{topic: "clients", clients: clients}
+    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
+    {:noreply, %{state | clients: clients}}
+  end
+
   defp handle_publish(
          ["status", id, component, module, code],
          %{payload: payload, properties: _properties},
          state
        ) do
     status = :erlang.binary_to_term(payload)
-    # command_id = properties[:"Correlation-Data"]
-    Logger.info("#{id}: Received status #{component}/#{module}/#{code}: #{status}")
 
-    {:noreply, state}
-  end
+    client =
+      state.clients[id] || %{statuses: %{}, online: false}
 
-  defp handle_publish(
-         ["status", id, "all"],
-         %{payload: payload, properties: _properties},
-         state
-       ) do
-    if id == Application.get_env(:rsmp, :sensor_id) do
-      status = :erlang.binary_to_term(payload)
-      Logger.info("#{id}: Received all status: #{inspect(status)}")
-    end
+    path = "#{component}/#{module}/#{code}"
+    statuses = client[:statuses] |> Map.put(path, status)
+    client = %{client | statuses: statuses}
+    clients = state.clients |> Map.put(id, client)
 
-    {:noreply, state}
+    Logger.info("#{id}: Received status #{path}: #{status}")
+    data = %{topic: "status", clients: clients}
+    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
+    {:noreply, %{state | clients: clients}}
   end
 
   # catch-all in case old retained messages are received from the broker
