@@ -20,8 +20,14 @@ defmodule RsmpSupervisor do
     {:ok, pid}
   end
 
+  # api
+
   def clients(pid) do
     GenServer.call(pid, :clients)
+  end
+
+  def set_plan(pid, client_id, plan) do
+    GenServer.cast(pid, {:set_plan, client_id, plan})
   end
 
   # Callbacks
@@ -37,8 +43,7 @@ defmodule RsmpSupervisor do
     {:ok, _, _} = :emqtt.subscribe(pid, "state/+")
 
     # Subscribe to our response topics
-    client_id = emqtt_opts[:clientid]
-    {:ok, _, _} = :emqtt.subscribe(pid, "response/#{client_id}/command/#")
+    {:ok, _, _} = :emqtt.subscribe(pid, "response/+/command/#")
 
     state = %{
       pid: pid,
@@ -51,6 +56,40 @@ defmodule RsmpSupervisor do
   @impl true
   def handle_call(:clients, _from, state) do
     {:reply, state.clients, state}
+  end
+
+  @impl true
+  def handle_cast({:set_plan, client_id, plan}, state) do
+    # Send command to device
+    command = ~c"plan"
+    topic = "command/#{client_id}/#{command}"
+    command_id = SecureRandom.hex(2)
+
+    Logger.info("Sending '#{command}' command #{command_id}: Please switch to plan #{plan}")
+
+    properties = %{
+      "Response-Topic": "response/#{client_id}/#{topic}",
+      "Correlation-Data": command_id
+    }
+
+    Logger.info("response/#{client_id}/#{topic}")
+
+    {:ok, _pkt_id} =
+      :emqtt.publish(
+        # Client
+        state[:pid],
+        # Topic
+        topic,
+        # Properties
+        properties,
+        # Payload
+        :erlang.term_to_binary(plan),
+        # Opts
+        retain: false,
+        qos: 1
+      )
+
+    {:noreply, state}
   end
 
   defp parse_topic(%{topic: topic}) do
@@ -72,11 +111,9 @@ defmodule RsmpSupervisor do
          %{payload: payload, properties: properties},
          state
        ) do
-    if id == Application.get_env(:rsmp, :sensor_id) do
-      status = :erlang.binary_to_term(payload)
-      command_id = properties[:"Correlation-Data"]
-      Logger.info("#{id}: Received response to '#{command}' command #{command_id}: #{status}")
-    end
+    status = :erlang.binary_to_term(payload)
+    command_id = properties[:"Correlation-Data"]
+    Logger.info("#{id}: Received response to '#{command}' command #{command_id}: #{status}")
 
     {:noreply, state}
   end
@@ -90,7 +127,7 @@ defmodule RsmpSupervisor do
 
     clients = Map.put(state.clients, id, client)
 
-    Logger.info("#{id}: Online: #{online}")
+    # Logger.info("#{id}: Online: #{online}")
     data = %{topic: "clients", clients: clients}
     Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
     {:noreply, %{state | clients: clients}}
@@ -111,7 +148,7 @@ defmodule RsmpSupervisor do
     client = %{client | statuses: statuses}
     clients = state.clients |> Map.put(id, client)
 
-    Logger.info("#{id}: Received status #{path}: #{status}")
+    # Logger.info("#{id}: Received status #{path}: #{status}")
     data = %{topic: "status", clients: clients}
     Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
     {:noreply, %{state | clients: clients}}

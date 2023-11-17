@@ -65,8 +65,6 @@ config :rsmp, :emqtt,
   clientid: "supervisor_742c",
   proto_ver: :v5
 
-config :rsmp, :sensor_id, "tlc_582a"
-
 # Period for chart
 config :rsmp, :timespan, 60
 

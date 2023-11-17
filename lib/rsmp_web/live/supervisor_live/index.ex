@@ -34,44 +34,10 @@ defmodule RsmpWeb.SupervisorLive.Index do
   end
 
   @impl true
-  def handle_event("set-plan", %{"plan" => plan_s}, socket) do
-    case Integer.parse(plan_s) do
-      {plan, ""} ->
-        emqtt_opts = Application.get_env(:rsmp, :emqtt)
-        client_id = emqtt_opts[:clientid]
-        device_id = Application.get_env(:rsmp, :sensor_id)
-        # Send command to device
-        command = ~c"plan"
-        topic = "command/#{device_id}/#{command}"
-        command_id = SecureRandom.hex(2)
-
-        Logger.info("Sending '#{command}' command #{command_id}: Please switch to plan #{plan_s}")
-
-        properties = %{
-          "Response-Topic": "response/#{client_id}/#{topic}",
-          "Correlation-Data": command_id
-        }
-
-        {:ok, _pkt_id} =
-          :emqtt.publish(
-            # Client
-            socket.assigns[:pid],
-            # Topic
-            topic,
-            # Properties
-            properties,
-            # Payload
-            plan_s,
-            # Opts
-            retain: false,
-            qos: 1
-          )
-
-        {:noreply, assign(socket, plan: plan)}
-
-      _ ->
-        {:noreply, socket}
-    end
+  def handle_event("set-plan", %{"value" => client_id}, socket) do
+    supervisor = Process.whereis(RsmpSupervisor)
+    supervisor |> RsmpSupervisor.set_plan(client_id, :rand.uniform(10))
+    {:noreply, socket}
   end
 
   def handle_event(name, data, socket) do
@@ -86,14 +52,15 @@ defmodule RsmpWeb.SupervisorLive.Index do
     <div id="clients" phx-update="append">
       <%= for {id,state} <- @clients do %>
         <div id="{id}" class={if state[:online], do: "client online", else: "client offline"} }>
-          <p id="state">
-            <%= id %>
-          </p>
-          <%= for {path,status} <- state[:statuses] do %>
-            <p id="status">
-              <%= path %>: <%= status %>
-            </p>
-          <% end %>
+          <p class="state"><%= id %></p>
+          <div class="details">
+            <%= for {path,status} <- state[:statuses] do %>
+              <p class="status"><%= path %>: <%= status %></p>
+            <% end %>
+            <.button value={id} phx-click="set-plan">
+              Command
+            </.button>
+          </div>
         </div>
       <% end %>
     </div>
