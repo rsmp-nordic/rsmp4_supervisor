@@ -17,6 +17,7 @@ defmodule RsmpWeb.Router do
   scope "/", RsmpWeb do
     pipe_through :browser
 
-    live "/", SupervisorLive.Index
+    live "/", SupervisorLive.Index, :list
+    live "/edit/:id", SupervisorLive.Index, :edit
   end
 end

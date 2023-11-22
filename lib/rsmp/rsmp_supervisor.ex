@@ -65,14 +65,14 @@ defmodule RsmpSupervisor do
     topic = "command/#{client_id}/#{command}"
     command_id = SecureRandom.hex(2)
 
-    Logger.info("Sending '#{command}' command #{command_id}: Please switch to plan #{plan}")
+    Logger.info("Sending '#{command}' command #{command_id} to #{client_id}: Please switch to plan #{plan}")
 
     properties = %{
       "Response-Topic": "response/#{client_id}/#{topic}",
       "Correlation-Data": command_id
     }
 
-    Logger.info("response/#{client_id}/#{topic}")
+    #Logger.info("response/#{client_id}/#{topic}")
 
     {:ok, _pkt_id} =
       :emqtt.publish(

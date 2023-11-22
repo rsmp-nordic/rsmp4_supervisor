@@ -13,8 +13,8 @@ h1 {
 	color: #888;
 }
 
-.client.online p.state:after {
-  content: " 🟢";
+.client.online .state:after {
+  content: "🟢";
 }
 
 .client .details {
@@ -24,5 +24,9 @@ h1 {
 
 .client button {
 	padding: 2px 6px;
-	background-color: #636;
+	background-color: #608;
+}
+
+td {
+	vertical-align: top;
 }
