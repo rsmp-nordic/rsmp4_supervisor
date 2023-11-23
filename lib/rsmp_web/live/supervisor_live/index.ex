@@ -21,33 +21,37 @@ defmodule RsmpWeb.SupervisorLive.Index do
 
   @impl true
   def handle_params(params, _url, socket) do
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
+    {:noreply, handle_path(socket, socket.assigns.live_action, params)}
   end
 
-  def apply_action(socket, :list, _params) do
-    Logger.info "list"
+  def handle_path(socket, :list, _params) do
     assign(socket, show_edit_modal: false)
   end
 
-  def apply_action(%{assigns: %{show_edit_modal: _}} = socket, :edit, _params) do
-    IO.inspect socket.assigns
-    assign(socket, show_edit_modal: true)
+  def handle_path(%{assigns: %{show_edit_modal: _}} = socket, :edit, %{"client_id" => client_id}) do
+    assign(socket, show_edit_modal: true, client_id: client_id)
   end
 
-  def apply_action(socket, _live_action, _params) do
+  def handle_path(socket, _live_action, _params) do
     push_patch(socket,
-      to: "/", #RsmpWeb.Router.counter_path(socket, :show),
+      to: ~p"/",
       replace: true
     )
   end
 
-  def handle_event("edit", _, socket) do
-    {:noreply,
-      push_patch(
-        socket,
-        to: "/edit/1234", #RsmpWeb.Router.edit_live_path(socket, RsmpWeb.SupervisorLive),
-        replace: true
-      )}
+  @impl true
+  def handle_event("edit", %{"client_id" => client_id}, socket) do
+    {:noreply, push_patch(
+      socket,
+      to: ~p"/edit/#{client_id}",
+      replace: true
+    )}
+  end
+
+  @impl true
+  def handle_event(name, data, socket) do
+    Logger.info("unhandled event: #{inspect([name, data])}")
+    {:noreply, socket}
   end
 
   @impl true
@@ -60,19 +64,17 @@ defmodule RsmpWeb.SupervisorLive.Index do
     {:noreply, assign(socket, clients: sort_clients(clients))}
   end
 
-
   @impl true
-  def handle_event(name, data, socket) do
-    Logger.info("handle_event: #{inspect([name, data])}")
+  def handle_info(%{topic: "response", response: %{response: response}}, socket) do
+    RsmpWeb.SupervisorLive.EditComponent.receive_response("edit",response)
     {:noreply, socket}
   end
-
 
   @impl true
   def render(assigns) do
     ~H"""
     <%= if @show_edit_modal do %>
-      <.live_component module={RsmpWeb.SupervisorLive.EditComponent} id="inspect", client_id="633f"/>
+      <.live_component module={RsmpWeb.SupervisorLive.EditComponent} id="edit", client_id={@client_id}/>
     <% end %>
 
     <h1>Clients</h1>

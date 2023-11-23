@@ -30,3 +30,8 @@ h1 {
 td {
 	vertical-align: top;
 }
+
+#edit {
+	padding-bottom: 50px;
+	marging-bottom: 50px;
+}

@@ -26,6 +26,10 @@ defmodule RsmpSupervisor do
     GenServer.call(pid, :clients)
   end
 
+ def client(pid,id) do
+    GenServer.call(pid, {:client, id})
+  end
+
   def set_plan(pid, client_id, plan) do
     GenServer.cast(pid, {:set_plan, client_id, plan})
   end
@@ -59,13 +63,18 @@ defmodule RsmpSupervisor do
   end
 
   @impl true
+  def handle_call({:client, id}, _from, state) do
+    {:reply, state.clients[id], state}
+  end
+
+  @impl true
   def handle_cast({:set_plan, client_id, plan}, state) do
     # Send command to device
     command = ~c"plan"
     topic = "command/#{client_id}/#{command}"
     command_id = SecureRandom.hex(2)
 
-    Logger.info("Sending '#{command}' command #{command_id} to #{client_id}: Please switch to plan #{plan}")
+    Logger.info("RSMP: Sending '#{command}' command #{command_id} to #{client_id}: Please switch to plan #{plan}")
 
     properties = %{
       "Response-Topic": "response/#{client_id}/#{topic}",
@@ -102,7 +111,7 @@ defmodule RsmpSupervisor do
   end
 
   def handle_info({:disconnected, _, _}, state) do
-    Logger.info("Disconnected")
+    Logger.info("RSMP: Disconnected")
     {:noreply, state}
   end
 
@@ -111,9 +120,17 @@ defmodule RsmpSupervisor do
          %{payload: payload, properties: properties},
          state
        ) do
-    status = :erlang.binary_to_term(payload)
+    response = :erlang.binary_to_term(payload)
     command_id = properties[:"Correlation-Data"]
-    Logger.info("#{id}: Received response to '#{command}' command #{command_id}: #{status}")
+    Logger.info("RSMP: #{id}: Received response to '#{command}' command #{command_id}: #{inspect(response)}")
+
+    data = %{topic: "response", response: %{
+      id: id,
+      command: command,
+      command_id: command_id,
+      response: response
+    }}
+    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
 
     {:noreply, state}
   end
@@ -139,16 +156,14 @@ defmodule RsmpSupervisor do
          state
        ) do
     status = :erlang.binary_to_term(payload)
-
-    client =
-      state.clients[id] || %{statuses: %{}, online: false}
+    client = state.clients[id] || %{statuses: %{}, online: false}
 
     path = "#{component}/#{module}/#{code}"
     statuses = client[:statuses] |> Map.put(path, status)
     client = %{client | statuses: statuses}
     clients = state.clients |> Map.put(id, client)
 
-    # Logger.info("#{id}: Received status #{path}: #{status}")
+    Logger.info("RSMP: #{id}: Received status #{path}: #{status} from #{id}")
     data = %{topic: "status", clients: clients}
     Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
     {:noreply, %{state | clients: clients}}
