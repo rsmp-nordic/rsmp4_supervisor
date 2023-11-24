@@ -65,6 +65,11 @@ defmodule RsmpWeb.SupervisorLive.Index do
   end
 
   @impl true
+  def handle_info(%{topic: "alarm", clients: clients}, socket) do
+    {:noreply, assign(socket, clients: sort_clients(clients))}
+  end
+
+  @impl true
   def handle_info(%{topic: "response", response: %{response: response}}, socket) do
     RsmpWeb.SupervisorLive.EditComponent.receive_response("edit",response)
     {:noreply, socket}
@@ -88,6 +93,9 @@ defmodule RsmpWeb.SupervisorLive.Index do
           <td class="details">
             <%= for {path,status} <- state[:statuses] do %>
               <p class="status"><%= path %>: <%= status %></p>
+            <% end %>
+            <%= for {path,alarm} <- state[:alarms] do %>
+              <p class="alarm"><%= path %>: <%= inspect(alarm) %></p>
             <% end %>
           </td>
           <td>

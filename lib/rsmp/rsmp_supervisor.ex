@@ -2,25 +2,21 @@ defmodule RsmpSupervisor do
   use GenServer
   require Logger
 
-  # Client
+  defstruct(
+      pid: nil,
+      clients: %{}
+    )
 
-  # Starts the genserver, and registeres it under the name RSMP.
-  # You can get the pid of the server with:
-  # > pid = Process.whereis(RSMP)
-  # 
-  # You can the interact with the server using the pid
-  # > pid |> RSMP.push(:pear)
-  # :ok
-  # > pid |> RSMP.pop()
-  # :pear
+  def new(options \\ %{}), do: __struct__(options)
 
+
+  # api
+  
   def start_link(default) when is_list(default) do
     {:ok, pid} = GenServer.start_link(__MODULE__, default)
     Process.register(pid, __MODULE__)
     {:ok, pid}
   end
-
-  # api
 
   def clients(pid) do
     GenServer.call(pid, :clients)
@@ -34,6 +30,7 @@ defmodule RsmpSupervisor do
     GenServer.cast(pid, {:set_plan, client_id, plan})
   end
 
+
   # Callbacks
 
   @impl true
@@ -44,31 +41,33 @@ defmodule RsmpSupervisor do
 
     # Subscribe to statuses
     {:ok, _, _} = :emqtt.subscribe(pid, "status/#")
+
+    # Subscribe to online/offline state
     {:ok, _, _} = :emqtt.subscribe(pid, "state/+")
+
+    # Subscribe to alamrs
+    {:ok, _, _} = :emqtt.subscribe(pid, "alarm/#")
+
 
     # Subscribe to our response topics
     {:ok, _, _} = :emqtt.subscribe(pid, "response/+/command/#")
 
-    state = %{
-      pid: pid,
-      clients: %{}
-    }
-
-    {:ok, state}
+    supervisor = new(pid: pid)
+    {:ok, supervisor}
   end
 
   @impl true
-  def handle_call(:clients, _from, state) do
-    {:reply, state.clients, state}
+  def handle_call(:clients, _from, supervisor) do
+    {:reply, supervisor.clients, supervisor}
   end
 
   @impl true
-  def handle_call({:client, id}, _from, state) do
-    {:reply, state.clients[id], state}
+  def handle_call({:client, id}, _from, supervisor) do
+    {:reply, supervisor.clients[id], supervisor}
   end
 
   @impl true
-  def handle_cast({:set_plan, client_id, plan}, state) do
+  def handle_cast({:set_plan, client_id, plan}, supervisor) do
     # Send command to device
     command = ~c"plan"
     topic = "command/#{client_id}/#{command}"
@@ -86,19 +85,19 @@ defmodule RsmpSupervisor do
     {:ok, _pkt_id} =
       :emqtt.publish(
         # Client
-        state[:pid],
+        supervisor.pid,
         # Topic
         topic,
         # Properties
         properties,
         # Payload
-        :erlang.term_to_binary(plan),
+        to_payload(plan),
         # Opts
         retain: false,
         qos: 1
       )
 
-    {:noreply, state}
+    {:noreply, supervisor}
   end
 
   defp parse_topic(%{topic: topic}) do
@@ -106,21 +105,21 @@ defmodule RsmpSupervisor do
   end
 
   @impl true
-  def handle_info({:publish, packet}, state) do
-    handle_publish(parse_topic(packet), packet, state)
+  def handle_info({:publish, packet}, supervisor) do
+    handle_publish(parse_topic(packet), packet, supervisor)
   end
 
-  def handle_info({:disconnected, _, _}, state) do
+  def handle_info({:disconnected, _, _}, supervisor) do
     Logger.info("RSMP: Disconnected")
-    {:noreply, state}
+    {:noreply, supervisor}
   end
 
   defp handle_publish(
          ["response", _supervisor_id, "command", id, command],
          %{payload: payload, properties: properties},
-         state
+         supervisor
        ) do
-    response = :erlang.binary_to_term(payload)
+    response = from_payload(payload)
     command_id = properties[:"Correlation-Data"]
     Logger.info("RSMP: #{id}: Received response to '#{command}' command #{command_id}: #{inspect(response)}")
 
@@ -132,45 +131,83 @@ defmodule RsmpSupervisor do
     }}
     Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
 
-    {:noreply, state}
+    {:noreply, supervisor}
   end
 
-  defp handle_publish(["state", id], %{payload: payload}, state) do
-    online = :erlang.binary_to_term(payload) == 1
-
+  defp handle_publish(["state", id], %{payload: payload}, supervisor) do
+    online = from_payload(payload) == 1
     client =
-      (state.clients[id] || %{statuses: %{}})
+      (supervisor.clients[id] || %{statuses: %{}, alarms: %{}})
       |> Map.put(:online, online)
 
-    clients = Map.put(state.clients, id, client)
+    clients = Map.put(supervisor.clients, id, client)
 
     # Logger.info("#{id}: Online: #{online}")
     data = %{topic: "clients", clients: clients}
     Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
-    {:noreply, %{state | clients: clients}}
+    {:noreply, %{supervisor | clients: clients}}
   end
 
   defp handle_publish(
          ["status", id, component, module, code],
          %{payload: payload, properties: _properties},
-         state
+         supervisor
        ) do
-    status = :erlang.binary_to_term(payload)
-    client = state.clients[id] || %{statuses: %{}, online: false}
+    status = from_payload(payload)
+    client = supervisor.clients[id] || %{statuses: %{}, alarms: %{}, online: false}
 
     path = "#{component}/#{module}/#{code}"
     statuses = client[:statuses] |> Map.put(path, status)
     client = %{client | statuses: statuses}
-    clients = state.clients |> Map.put(id, client)
+    clients = supervisor.clients |> Map.put(id, client)
 
     Logger.info("RSMP: #{id}: Received status #{path}: #{status} from #{id}")
     data = %{topic: "status", clients: clients}
     Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
-    {:noreply, %{state | clients: clients}}
+    {:noreply, %{supervisor | clients: clients}}
   end
 
+  defp handle_publish(
+         ["alarm", id, component, module, code],
+         %{payload: payload, properties: _properties},
+         supervisor
+       ) do
+    status = from_payload(payload)
+    client = supervisor.clients[id] || %{statuses: %{}, alarms: %{}, online: false}
+
+    path = "#{component}/#{module}/#{code}"
+    alarms = client[:alarms] |> Map.put(path, status)
+    client = %{client | alarms: alarms}
+    clients = supervisor.clients |> Map.put(id, client)
+
+    Logger.info("RSMP: #{id}: Received alarm #{path}: #{inspect(status)} from #{id}")
+    data = %{topic: "alarm", clients: clients}
+    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
+    {:noreply, %{supervisor | clients: clients}}
+  end
+
+
   # catch-all in case old retained messages are received from the broker
-  defp handle_publish(_topic, %{payload: _payload, properties: _properties}, state) do
-    {:noreply, state}
+  defp handle_publish(topic, %{payload: _payload, properties: _properties}, supervisor) do
+    IO.inspect topic
+    {:noreply, supervisor}
+  end
+
+  def to_payload(data) do
+    {:ok, json} = JSON.encode(data)
+    #Logger.info "Encoded #{data} to JSON: #{inspect(json)}"
+    json
+  end
+
+  def from_payload(json) do
+    try do
+      {:ok, data} = JSON.decode(json)
+      #Logger.info "Decoded JSON #{json} to #{data}"
+      data
+    rescue
+      _e ->
+      #Logger.warning "Could not decode JSON: #{inspect(json)}"
+      nil
+    end
   end
 end

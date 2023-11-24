@@ -50,7 +50,8 @@ defmodule Rsmp.MixProject do
       {:emqtt, github: "emqx/emqtt", system_env: [{"BUILD_WITHOUT_QUIC", "1"}]},
       # We will need this for SVG charts
       {:contex, github: "mindok/contex"},
-      {:heroicons, "~> 0.5.3"}
+      {:heroicons, "~> 0.5.3"},
+      {:json, "~> 1.4"}
     ]
   end
 

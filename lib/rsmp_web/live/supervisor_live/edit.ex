@@ -1,5 +1,4 @@
 defmodule RsmpWeb.SupervisorLive.EditComponent do
-  use RsmpWeb, :live_view
   use Phoenix.LiveComponent
 
   require Logger
@@ -33,12 +32,12 @@ defmodule RsmpWeb.SupervisorLive.EditComponent do
 
   @impl true
   def update(assigns,socket) do
-    assigns = socket.assigns |> Map.merge assigns
+    assigns = socket.assigns |> Map.merge(assigns)
     client_id = assigns[:client_id]
     supervisor = Process.whereis(RsmpSupervisor)
     client = supervisor |> RsmpSupervisor.client(client_id)
     plan = client.statuses["main/system/plan"]
-    {status,plan,reason} = assigns[:response]
+    {status,_response_plan,reason} = assigns[:response]
 
     {:ok,
      assign(socket,
@@ -61,9 +60,8 @@ defmodule RsmpWeb.SupervisorLive.EditComponent do
   end
 
   def receive_response(id, response) do
-    Logger.info "RESP"
-    {status,plan,reason} = response
-    status = if status == :ok, do: "✅", else: "❌"
+    %{"status" => status, "plan" =>  plan, "reason" => reason} = response
+    status = if status == "ok", do: "✅", else: "❌"
     send_update(__MODULE__, id: id, response: {status,plan,reason})
   end
 
