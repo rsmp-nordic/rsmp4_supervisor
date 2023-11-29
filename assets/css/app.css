@@ -35,3 +35,18 @@ td {
 	padding-bottom: 50px;
 	marging-bottom: 50px;
 }
+
+button {
+	background-color: #608;
+	color: white;
+	padding: 2px 10px;
+	border-radius: 6px;
+}
+
+button.true {
+	background-color: #608;
+}
+
+button.false {
+	background-color: #888;
+}

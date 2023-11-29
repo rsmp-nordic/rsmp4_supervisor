@@ -94,8 +94,16 @@ defmodule RsmpWeb.SupervisorLive.Index do
             <%= for {path,status} <- state[:statuses] do %>
               <p class="status"><%= path %>: <%= status %></p>
             <% end %>
-            <%= for {path,alarm} <- state[:alarms] do %>
-              <p class="alarm"><%= path %>: <%= inspect(alarm) %></p>
+            <%= for {path,alarm} <- Enum.sort(state[:alarms]) do %>
+              <p class="alarm">
+                <%= path %>
+                <%= for {flag,value} <- alarm do %>
+                  <button phx-click="alarm" phx-value-path={path} value={flag} class={to_string(value)}>
+                    <%= to_string(flag) %>
+                  </button>
+                <% end %>
+
+              </p>
             <% end %>
           </td>
           <td>
