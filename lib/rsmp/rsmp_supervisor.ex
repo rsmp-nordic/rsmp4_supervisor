@@ -3,15 +3,14 @@ defmodule RsmpSupervisor do
   require Logger
 
   defstruct(
-      pid: nil,
-      clients: %{}
-    )
+    pid: nil,
+    clients: %{}
+  )
 
   def new(options \\ %{}), do: __struct__(options)
 
-
   # api
-  
+
   def start_link(default) when is_list(default) do
     {:ok, pid} = GenServer.start_link(__MODULE__, default)
     Process.register(pid, __MODULE__)
@@ -22,7 +21,7 @@ defmodule RsmpSupervisor do
     GenServer.call(pid, :clients)
   end
 
- def client(pid,id) do
+  def client(pid, id) do
     GenServer.call(pid, {:client, id})
   end
 
@@ -30,6 +29,9 @@ defmodule RsmpSupervisor do
     GenServer.cast(pid, {:set_plan, client_id, plan})
   end
 
+  def set_alarm_flag(pid, client_id, path, flag, value) do
+    GenServer.cast(pid, {:set_alarm_flag, client_id, path, flag, value})
+  end
 
   # Callbacks
 
@@ -47,7 +49,6 @@ defmodule RsmpSupervisor do
 
     # Subscribe to alamrs
     {:ok, _, _} = :emqtt.subscribe(pid, "alarm/#")
-
 
     # Subscribe to our response topics
     {:ok, _, _} = :emqtt.subscribe(pid, "response/+/command/#")
@@ -73,14 +74,16 @@ defmodule RsmpSupervisor do
     topic = "command/#{client_id}/#{command}"
     command_id = SecureRandom.hex(2)
 
-    Logger.info("RSMP: Sending '#{command}' command #{command_id} to #{client_id}: Please switch to plan #{plan}")
+    Logger.info(
+      "RSMP: Sending '#{command}' command #{command_id} to #{client_id}: Please switch to plan #{plan}"
+    )
 
     properties = %{
       "Response-Topic": "response/#{client_id}/#{topic}",
       "Correlation-Data": command_id
     }
 
-    #Logger.info("response/#{client_id}/#{topic}")
+    # Logger.info("response/#{client_id}/#{topic}")
 
     {:ok, _pkt_id} =
       :emqtt.publish(
@@ -98,6 +101,46 @@ defmodule RsmpSupervisor do
       )
 
     {:noreply, supervisor}
+  end
+
+  @impl true
+  def handle_cast({:set_alarm_flag, client_id, path, flag, value}, supervisor) do
+    supervisor = put_in(supervisor.clients[client_id].alarms[path][flag],value)
+
+    # Send alarm flag to device
+    topic = "flag/#{client_id}/#{path}"
+
+    Logger.info(
+      "RSMP: Sending alarm flag #{path} to #{client_id}: Set #{flag} to #{value}"
+    )
+
+    {:ok, _pkt_id} =
+      :emqtt.publish(
+        # Client
+        supervisor.pid,
+        # Topic
+        topic,
+        # Properties
+        %{},
+        # Payload
+        to_payload([flag,value]),
+        # Opts
+        retain: false,
+        qos: 1
+      )
+
+    {:noreply, supervisor}
+
+
+    data = %{
+      topic: "alarm",
+      id: client_id,
+      path: path,
+      alarm: supervisor.clients[client_id].alarms[path]
+    }
+    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
+
+    {:noreply, supervisor }
   end
 
   defp parse_topic(%{topic: topic}) do
@@ -121,14 +164,21 @@ defmodule RsmpSupervisor do
        ) do
     response = from_payload(payload)
     command_id = properties[:"Correlation-Data"]
-    Logger.info("RSMP: #{id}: Received response to '#{command}' command #{command_id}: #{inspect(response)}")
 
-    data = %{topic: "response", response: %{
-      id: id,
-      command: command,
-      command_id: command_id,
-      response: response
-    }}
+    Logger.info(
+      "RSMP: #{id}: Received response to '#{command}' command #{command_id}: #{inspect(response)}"
+    )
+
+    data = %{
+      topic: "response",
+      response: %{
+        id: id,
+        command: command,
+        command_id: command_id,
+        response: response
+      }
+    }
+
     Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
 
     {:noreply, supervisor}
@@ -136,6 +186,7 @@ defmodule RsmpSupervisor do
 
   defp handle_publish(["state", id], %{payload: payload}, supervisor) do
     online = from_payload(payload) == 1
+
     client =
       (supervisor.clients[id] || %{statuses: %{}, alarms: %{}})
       |> Map.put(:online, online)
@@ -186,28 +237,27 @@ defmodule RsmpSupervisor do
     {:noreply, %{supervisor | clients: clients}}
   end
 
-
   # catch-all in case old retained messages are received from the broker
   defp handle_publish(topic, %{payload: _payload, properties: _properties}, supervisor) do
-    IO.inspect topic
+    Logger.warning "Unhandled publish: #{topic}"
     {:noreply, supervisor}
   end
 
   def to_payload(data) do
     {:ok, json} = JSON.encode(data)
-    #Logger.info "Encoded #{data} to JSON: #{inspect(json)}"
+    # Logger.info "Encoded #{data} to JSON: #{inspect(json)}"
     json
   end
 
   def from_payload(json) do
     try do
       {:ok, data} = JSON.decode(json)
-      #Logger.info "Decoded JSON #{json} to #{data}"
+      # Logger.info "Decoded JSON #{json} to #{data}"
       data
     rescue
       _e ->
-      #Logger.warning "Could not decode JSON: #{inspect(json)}"
-      nil
+        # Logger.warning "Could not decode JSON: #{inspect(json)}"
+        nil
     end
   end
 end

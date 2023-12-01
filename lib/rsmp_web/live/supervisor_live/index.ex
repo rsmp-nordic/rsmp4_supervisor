@@ -5,12 +5,33 @@ defmodule RsmpWeb.SupervisorLive.Index do
   require Logger
 
   @impl true
-  def mount(_params, _session, socket) do
+  def mount(params, session, socket) do
+    case connected?(socket) do
+      true ->
+        connected_mount(params, session, socket)
+
+      false ->
+        initial_mount(params, session, socket)
+    end
+  end
+
+  def initial_mount(_params, _session, socket) do
+    {:ok,
+     assign(socket,
+       clients: %{}
+     )}
+  end
+
+  def connected_mount(_params, _session, socket) do
     Phoenix.PubSub.subscribe(Rsmp.PubSub, "rsmp")
     supervisor = Process.whereis(RsmpSupervisor)
     clients = supervisor |> RsmpSupervisor.clients()
 
-    {:ok, assign(socket, clients: sort_clients(clients))}
+    {:ok,
+     assign(socket,
+       supervisor: supervisor,
+       clients: sort_clients(clients)
+     )}
   end
 
   def sort_clients(clients) do
@@ -41,11 +62,18 @@ defmodule RsmpWeb.SupervisorLive.Index do
 
   @impl true
   def handle_event("edit", %{"client_id" => client_id}, socket) do
-    {:noreply, push_patch(
-      socket,
-      to: ~p"/edit/#{client_id}",
-      replace: true
-    )}
+    {:noreply,
+     push_patch(
+       socket,
+       to: ~p"/edit/#{client_id}",
+       replace: true
+     )}
+  end
+
+  @impl true
+  def handle_event("alarm", %{"client-id" => client_id, "path" => path, "flag" => flag, "value" => value}, socket) do
+    RsmpSupervisor.set_alarm_flag(socket.assigns.supervisor, client_id, path, flag, value == "true")
+    {:noreply, socket}
   end
 
   @impl true
@@ -71,15 +99,30 @@ defmodule RsmpWeb.SupervisorLive.Index do
 
   @impl true
   def handle_info(%{topic: "response", response: %{response: response}}, socket) do
-    RsmpWeb.SupervisorLive.EditComponent.receive_response("edit",response)
+    RsmpWeb.SupervisorLive.EditComponent.receive_response("edit", response)
     {:noreply, socket}
   end
+
+  @impl true
+  def handle_info(%{topic: "alarm", id: id, path: path, alarm: alarm}, socket) do
+    clients =
+      socket.assigns.supervisor
+      |> RsmpSupervisor.clients()
+      |> sort_clients()
+    {:noreply, assign(socket, clients: clients) }
+  end
+
 
   @impl true
   def render(assigns) do
     ~H"""
     <%= if @show_edit_modal do %>
-      <.live_component module={RsmpWeb.SupervisorLive.EditComponent} id="edit", client_id={@client_id}/>
+      <.live_component
+        module={RsmpWeb.SupervisorLive.EditComponent}
+        id="edit"
+        ,
+        client_id={@client_id}
+      />
     <% end %>
 
     <h1>Clients</h1>
@@ -98,17 +141,22 @@ defmodule RsmpWeb.SupervisorLive.Index do
               <p class="alarm">
                 <%= path %>
                 <%= for {flag,value} <- alarm do %>
-                  <button phx-click="alarm" phx-value-path={path} value={flag} class={to_string(value)}>
+                  <button
+                    phx-click="alarm"
+                    phx-value-client-id={id}
+                    phx-value-path={path}
+                    phx-value-flag={flag}
+                    value={inspect(!value)}
+                    class={to_string(value)}
+                  >
                     <%= to_string(flag) %>
                   </button>
                 <% end %>
-
               </p>
             <% end %>
           </td>
           <td>
-          <Heroicons.pencil_square solid 
-            class="h-4 w-4" phx-click="edit" phx-value-client_id={id}/>
+            <Heroicons.pencil_square solid class="h-4 w-4" phx-click="edit" phx-value-client_id={id} />
           </td>
         </tr>
       <% end %>
