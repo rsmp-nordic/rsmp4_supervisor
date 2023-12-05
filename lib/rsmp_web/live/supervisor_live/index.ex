@@ -37,7 +37,7 @@ defmodule RsmpWeb.SupervisorLive.Index do
   def sort_clients(clients) do
     clients
     |> Map.to_list()
-    |> Enum.sort_by(fn {_id, state} -> {state[:online] == false, state} end, :asc)
+    |> Enum.sort_by(fn {id, state} -> {state[:online] == false, id} end, :asc)
   end
 
   @impl true
