@@ -4,6 +4,7 @@ defmodule RsmpSupervisor do
 
   defstruct(
     pid: nil,
+    id: nil,
     clients: %{}
   )
 
@@ -38,6 +39,7 @@ defmodule RsmpSupervisor do
   @impl true
   def init(_rsmp) do
     emqtt_opts = Application.get_env(:rsmp, :emqtt)
+    id = emqtt_opts[:clientid]
     {:ok, pid} = :emqtt.start_link(emqtt_opts)
     {:ok, _} = :emqtt.connect(pid)
 
@@ -51,9 +53,9 @@ defmodule RsmpSupervisor do
     {:ok, _, _} = :emqtt.subscribe(pid, "alarm/#")
 
     # Subscribe to our response topics
-    {:ok, _, _} = :emqtt.subscribe(pid, "response/+/command/#")
+    {:ok, _, _} = :emqtt.subscribe(pid, "response/#{id}/command/#")
 
-    supervisor = new(pid: pid)
+    supervisor = new(pid: pid, id: id)
     {:ok, supervisor}
   end
 
@@ -79,7 +81,7 @@ defmodule RsmpSupervisor do
     )
 
     properties = %{
-      "Response-Topic": "response/#{client_id}/#{topic}",
+      "Response-Topic": "response/#{supervisor.id}/#{topic}",
       "Correlation-Data": command_id
     }
 
@@ -123,7 +125,7 @@ defmodule RsmpSupervisor do
         # Properties
         %{},
         # Payload
-        to_payload([flag,value]),
+        to_payload(%{flag => value}),
         # Opts
         retain: false,
         qos: 1
