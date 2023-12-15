@@ -63,7 +63,8 @@ import_config "#{config_env()}.exs"
 config :rsmp, :emqtt,
   host: ~c"127.0.0.1",
   clientid: "supervisor_742c",
-  proto_ver: :v5
+  proto_ver: :v5,
+  reconnect: true
 
 # Period for chart
 config :rsmp, :timespan, 60
