@@ -104,63 +104,11 @@ defmodule RsmpWeb.SupervisorLive.Index do
   end
 
   @impl true
-  def handle_info(%{topic: "alarm", id: id, path: path, alarm: alarm}, socket) do
+  def handle_info(%{topic: "alarm", id: _id, path: _path, alarm: _alarm}, socket) do
     clients =
       socket.assigns.supervisor
       |> RsmpSupervisor.clients()
       |> sort_clients()
     {:noreply, assign(socket, clients: clients) }
-  end
-
-
-  @impl true
-  def render(assigns) do
-    ~H"""
-    <%= if @show_edit_modal do %>
-      <.live_component
-        module={RsmpWeb.SupervisorLive.EditComponent}
-        id="edit"
-        ,
-        client_id={@client_id}
-      />
-    <% end %>
-
-    <h1>Clients</h1>
-    <table id="clients">
-      <%= for {id,state} <- @clients do %>
-        <tr id="{id}" class={if state[:online], do: "client online", else: "client offline"} }>
-          <td class="state">
-            <p></p>
-          </td>
-          <td><%= id %></td>
-          <td class="details">
-            <%= for {path,status} <- state[:statuses] do %>
-              <p class="status"><%= path %>: <%= status %></p>
-            <% end %>
-            <%= for {path,alarm} <- Enum.sort(state[:alarms]) do %>
-              <p class="alarm">
-                <%= path %>
-                <%= for {flag,value} <- alarm do %>
-                  <button
-                    phx-click="alarm"
-                    phx-value-client-id={id}
-                    phx-value-path={path}
-                    phx-value-flag={flag}
-                    value={inspect(!value)}
-                    class={to_string(value)}
-                  >
-                    <%= to_string(flag) %>
-                  </button>
-                <% end %>
-              </p>
-            <% end %>
-          </td>
-          <td>
-            <Heroicons.pencil_square solid class="h-4 w-4" phx-click="edit" phx-value-client_id={id} />
-          </td>
-        </tr>
-      <% end %>
-    </table>
-    """
   end
 end

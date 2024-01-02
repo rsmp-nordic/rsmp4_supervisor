@@ -190,7 +190,7 @@ defmodule RsmpSupervisor do
     online = from_payload(payload) == 1
 
     client =
-      (supervisor.clients[id] || %{statuses: %{}, alarms: %{}})
+      (supervisor.clients[id] || %{statuses: %{}, alarms: %{}, num_alarm: 0})
       |> Map.put(:online, online)
 
     clients = Map.put(supervisor.clients, id, client)
@@ -230,7 +230,7 @@ defmodule RsmpSupervisor do
 
     path = "#{component}/#{module}/#{code}"
     alarms = client[:alarms] |> Map.put(path, status)
-    client = %{client | alarms: alarms}
+    client = %{client | alarms: alarms} |> set_client_num_alarms()
     clients = supervisor.clients |> Map.put(id, client)
 
     Logger.info("RSMP: #{id}: Received alarm #{path}: #{inspect(status)} from #{id}")
@@ -261,5 +261,12 @@ defmodule RsmpSupervisor do
         # Logger.warning "Could not decode JSON: #{inspect(json)}"
         nil
     end
+  end
+
+  def set_client_num_alarms(client) do
+    num = client.alarms |> Enum.count(fn {_path, alarm} ->
+      alarm["active"]
+    end)
+    client |> Map.put(:num_alarms, num)
   end
 end
