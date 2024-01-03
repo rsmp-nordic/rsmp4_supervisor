@@ -38,20 +38,16 @@ defmodule RsmpWeb.SupervisorLive.Client do
 
   @impl true
   def handle_event("alarm", %{"path" => path, "flag" => flag, "value" => value}, socket) do
-    #    IO.inspect {path,flag,value}
-
     supervisor = socket.assigns.supervisor
     client_id = socket.assigns.client_id
     new_value = value == "false"
 
-    #    IO.inspect {supervisor, client_id, path, flag, new_value}
     RsmpSupervisor.set_alarm_flag(supervisor, client_id, path, flag, new_value)
     {:noreply, socket |> assign_client()}
   end
 
   @impl true
   def handle_event("command", %{"path" => path, "value" => plan}, socket) do
-    IO.inspect({path, plan})
     plan = String.to_integer(plan)
     client_id = socket.assigns[:client_id]
     supervisor = socket.assigns.supervisor
@@ -88,7 +84,7 @@ defmodule RsmpWeb.SupervisorLive.Client do
       case response[:result]["status"] do
         "unknown" -> "⚠️ "
         "already" -> "ℹ️ "
-        "ok" -> raw("&check;")
+        "ok" -> "✔️"
         _ -> ""
       end
 
