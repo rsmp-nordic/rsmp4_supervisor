@@ -71,8 +71,19 @@ defmodule RsmpWeb.SupervisorLive.Index do
   end
 
   @impl true
-  def handle_event("alarm", %{"client-id" => client_id, "path" => path, "flag" => flag, "value" => value}, socket) do
-    RsmpSupervisor.set_alarm_flag(socket.assigns.supervisor, client_id, path, flag, value == "true")
+  def handle_event(
+        "alarm",
+        %{"client-id" => client_id, "path" => path, "flag" => flag, "value" => value},
+        socket
+      ) do
+    RsmpSupervisor.set_alarm_flag(
+      socket.assigns.supervisor,
+      client_id,
+      path,
+      flag,
+      value == "true"
+    )
+
     {:noreply, socket}
   end
 
@@ -109,6 +120,7 @@ defmodule RsmpWeb.SupervisorLive.Index do
       socket.assigns.supervisor
       |> RsmpSupervisor.clients()
       |> sort_clients()
-    {:noreply, assign(socket, clients: clients) }
+
+    {:noreply, assign(socket, clients: clients)}
   end
 end

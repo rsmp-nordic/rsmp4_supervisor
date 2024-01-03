@@ -18,6 +18,6 @@ defmodule RsmpWeb.Router do
     pipe_through :browser
 
     live "/", SupervisorLive.Index, :list
-    live "/client/:client_id", SupervisorLive.Client, :show
+    live "/client/:client_id", SupervisorLive.Client, :client
   end
 end

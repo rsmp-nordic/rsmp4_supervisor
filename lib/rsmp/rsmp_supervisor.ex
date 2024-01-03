@@ -107,14 +107,12 @@ defmodule RsmpSupervisor do
 
   @impl true
   def handle_cast({:set_alarm_flag, client_id, path, flag, value}, supervisor) do
-    supervisor = put_in(supervisor.clients[client_id].alarms[path][flag],value)
+    supervisor = put_in(supervisor.clients[client_id].alarms[path][flag], value)
 
     # Send alarm flag to device
     topic = "flag/#{client_id}/#{path}"
 
-    Logger.info(
-      "RSMP: Sending alarm flag #{path} to #{client_id}: Set #{flag} to #{value}"
-    )
+    Logger.info("RSMP: Sending alarm flag #{path} to #{client_id}: Set #{flag} to #{value}")
 
     {:ok, _pkt_id} =
       :emqtt.publish(
@@ -133,16 +131,16 @@ defmodule RsmpSupervisor do
 
     {:noreply, supervisor}
 
-
     data = %{
       topic: "alarm",
       id: client_id,
       path: path,
       alarm: supervisor.clients[client_id].alarms[path]
     }
+
     Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
 
-    {:noreply, supervisor }
+    {:noreply, supervisor}
   end
 
   defp parse_topic(%{topic: topic}) do
@@ -177,7 +175,7 @@ defmodule RsmpSupervisor do
         id: id,
         command: command,
         command_id: command_id,
-        response: response
+        result: response
       }
     }
 
@@ -241,7 +239,7 @@ defmodule RsmpSupervisor do
 
   # catch-all in case old retained messages are received from the broker
   defp handle_publish(topic, %{payload: _payload, properties: _properties}, supervisor) do
-    Logger.warning "Unhandled publish: #{topic}"
+    Logger.warning("Unhandled publish: #{topic}")
     {:noreply, supervisor}
   end
 
@@ -264,9 +262,12 @@ defmodule RsmpSupervisor do
   end
 
   def set_client_num_alarms(client) do
-    num = client.alarms |> Enum.count(fn {_path, alarm} ->
-      alarm["active"]
-    end)
+    num =
+      client.alarms
+      |> Enum.count(fn {_path, alarm} ->
+        alarm["active"]
+      end)
+
     client |> Map.put(:num_alarms, num)
   end
 end
