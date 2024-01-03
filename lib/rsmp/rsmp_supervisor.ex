@@ -17,11 +17,15 @@ defmodule RsmpSupervisor do
     GenServer.start_link(__MODULE__, options, name: __MODULE__)
   end
 
+  def client_ids() do
+    GenServer.call(__MODULE__, :client_ids)
+  end
+
   def clients() do
     GenServer.call(__MODULE__, :clients)
   end
 
-  def client( id) do
+  def client(id) do
     GenServer.call(__MODULE__, {:client, id})
   end
 
@@ -56,6 +60,11 @@ defmodule RsmpSupervisor do
 
     supervisor = new(pid: pid, id: id)
     {:ok, supervisor}
+  end
+
+  @impl true
+  def handle_call(:client_ids, _from, supervisor) do
+    {:reply, Map.keys(supervisor.clients), supervisor}
   end
 
   @impl true
