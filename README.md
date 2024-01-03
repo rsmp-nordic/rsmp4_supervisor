@@ -26,10 +26,10 @@ Interactive Elixir (1.15.5) - press Ctrl+C to exit (type h() ENTER for help)
 [info] RSMP: tlc_2b3c3cf7: Received status main/system/plan: 4 from tlc_2b3c3cf7
 [info] RSMP: tlc_2b3c3cf7: Received status main/system/temperature: 28 from tlc_2b3c3cf7
 
-iex(4)> RsmpSupervisor.client_ids()
+iex(4)> Rsmp.Supervisor.client_ids()
 ["tlc_2b3c3cf7", "tlc_7a88044b", "tlc_d8815f19", "tlc_debf8805"]
 
-iex(6)> RsmpSupervisor.client("tlc_2b3c3cf7")
+iex(6)> Rsmp.Supervisor.client("tlc_2b3c3cf7")
 %{
   alarms: %{
     "main/system/humidity" => %{
@@ -52,7 +52,7 @@ iex(6)> RsmpSupervisor.client("tlc_2b3c3cf7")
   }
 }
 
-iex(6)> RsmpSupervisor.set_plan("tlc_7a88044b",2)
+iex(6)> Rsmp.Supervisor.set_plan("tlc_7a88044b",2)
 :ok
 [info] RSMP: Sending 'plan' command d16a to tlc_7a88044b: Please switch to plan 5
 iex(7)> [info] RSMP: tlc_7a88044b: Received response to 'plan' command d16a: %{"plan" => 5, "reason" => "", "status" => "ok"}

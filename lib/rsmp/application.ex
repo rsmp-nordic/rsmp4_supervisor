@@ -17,14 +17,14 @@ defmodule Rsmp.Application do
       # Start the Endpoint (http/https)
       RsmpWeb.Endpoint,
       # Start or registry
-      {Registry, keys: :unique, name: RsmpRegistry},
+      {Registry, keys: :unique, name: Rsmp.Registry},
       # Start our RSMP supervisor
-      RsmpSupervisor
+      Rsmp.Supervisor
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
-    opts = [strategy: :one_for_one, name: Rsmp.Supervisor]
+    opts = [strategy: :one_for_one, name: Rsmp.AppSupervisor]
     Supervisor.start_link(children, opts)
   end
 

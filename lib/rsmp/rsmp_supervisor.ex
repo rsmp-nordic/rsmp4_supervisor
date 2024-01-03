@@ -1,4 +1,4 @@
-defmodule RsmpSupervisor do
+defmodule Rsmp.Supervisor do
   use GenServer
   require Logger
 
