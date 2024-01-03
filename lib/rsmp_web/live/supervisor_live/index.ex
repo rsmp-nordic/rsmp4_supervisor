@@ -41,36 +41,6 @@ defmodule RsmpWeb.SupervisorLive.Index do
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
-    {:noreply, handle_path(socket, socket.assigns.live_action, params)}
-  end
-
-  def handle_path(socket, :list, _params) do
-    assign(socket, show_edit_modal: false)
-  end
-
-  def handle_path(%{assigns: %{show_edit_modal: _}} = socket, :edit, %{"client_id" => client_id}) do
-    assign(socket, show_edit_modal: true, client_id: client_id)
-  end
-
-  def handle_path(socket, _live_action, _params) do
-    push_patch(socket,
-      to: ~p"/",
-      replace: true
-    )
-  end
-
-  @impl true
-  def handle_event("edit", %{"client_id" => client_id}, socket) do
-    {:noreply,
-     push_patch(
-       socket,
-       to: ~p"/edit/#{client_id}",
-       replace: true
-     )}
-  end
-
-  @impl true
   def handle_event(
         "alarm",
         %{"client-id" => client_id, "path" => path, "flag" => flag, "value" => value},
@@ -109,8 +79,8 @@ defmodule RsmpWeb.SupervisorLive.Index do
   end
 
   @impl true
-  def handle_info(%{topic: "response", response: %{response: response}}, socket) do
-    RsmpWeb.SupervisorLive.EditComponent.receive_response("edit", response)
+  def handle_info(%{topic: topic}=data, socket) do
+    Logger.info("unhandled info: #{inspect([topic, data])}")
     {:noreply, socket}
   end
 

@@ -47,7 +47,7 @@ defmodule RsmpWeb.SupervisorLive.Client do
   end
 
   @impl true
-  def handle_event("command", %{"path" => path, "value" => plan}, socket) do
+  def handle_event("command", %{"path" => _path, "value" => plan}, socket) do
     plan = String.to_integer(plan)
     client_id = socket.assigns[:client_id]
     supervisor = socket.assigns.supervisor
