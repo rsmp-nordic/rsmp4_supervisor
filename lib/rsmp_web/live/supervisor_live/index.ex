@@ -24,12 +24,10 @@ defmodule RsmpWeb.SupervisorLive.Index do
 
   def connected_mount(_params, _session, socket) do
     Phoenix.PubSub.subscribe(Rsmp.PubSub, "rsmp")
-    supervisor = Process.whereis(RsmpSupervisor)
-    clients = supervisor |> RsmpSupervisor.clients()
+    clients = RsmpSupervisor.clients()
 
     {:ok,
      assign(socket,
-       supervisor: supervisor,
        clients: sort_clients(clients)
      )}
   end
@@ -47,7 +45,6 @@ defmodule RsmpWeb.SupervisorLive.Index do
         socket
       ) do
     RsmpSupervisor.set_alarm_flag(
-      socket.assigns.supervisor,
       client_id,
       path,
       flag,
@@ -86,10 +83,7 @@ defmodule RsmpWeb.SupervisorLive.Index do
 
   @impl true
   def handle_info(%{topic: "alarm", id: _id, path: _path, alarm: _alarm}, socket) do
-    clients =
-      socket.assigns.supervisor
-      |> RsmpSupervisor.clients()
-      |> sort_clients()
+    clients = RsmpSupervisor.clients() |> sort_clients()
 
     {:noreply, assign(socket, clients: clients)}
   end

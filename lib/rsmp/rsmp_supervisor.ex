@@ -2,6 +2,7 @@ defmodule RsmpSupervisor do
   use GenServer
   require Logger
 
+
   defstruct(
     pid: nil,
     id: nil,
@@ -12,26 +13,24 @@ defmodule RsmpSupervisor do
 
   # api
 
-  def start_link(default) when is_list(default) do
-    {:ok, pid} = GenServer.start_link(__MODULE__, default)
-    Process.register(pid, __MODULE__)
-    {:ok, pid}
+  def start_link(options) do
+    GenServer.start_link(__MODULE__, options, name: __MODULE__)
   end
 
-  def clients(pid) do
-    GenServer.call(pid, :clients)
+  def clients() do
+    GenServer.call(__MODULE__, :clients)
   end
 
-  def client(pid, id) do
-    GenServer.call(pid, {:client, id})
+  def client( id) do
+    GenServer.call(__MODULE__, {:client, id})
   end
 
-  def set_plan(pid, client_id, plan) do
-    GenServer.cast(pid, {:set_plan, client_id, plan})
+  def set_plan(client_id, plan) do
+    GenServer.cast(__MODULE__, {:set_plan, client_id, plan})
   end
 
-  def set_alarm_flag(pid, client_id, path, flag, value) do
-    GenServer.cast(pid, {:set_alarm_flag, client_id, path, flag, value})
+  def set_alarm_flag(client_id, path, flag, value) do
+    GenServer.cast(__MODULE__, {:set_alarm_flag, client_id, path, flag, value})
   end
 
   # Callbacks

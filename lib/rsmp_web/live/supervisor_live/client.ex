@@ -12,13 +12,11 @@ defmodule RsmpWeb.SupervisorLive.Client do
       Phoenix.PubSub.subscribe(Rsmp.PubSub, "rsmp")
     end
 
-    supervisor = Process.whereis(RsmpSupervisor)
     client_id = params["client_id"]
-    client = supervisor |> RsmpSupervisor.client(client_id)
+    client = RsmpSupervisor.client(client_id)
 
     {:ok,
      assign(socket,
-       supervisor: supervisor,
        client_id: client_id,
        client: client,
        alarm_flags: Enum.sort(["active", "acknowledged", "blocked"]),
@@ -28,9 +26,8 @@ defmodule RsmpWeb.SupervisorLive.Client do
   end
 
   def assign_client(socket) do
-    supervisor = socket.assigns.supervisor
     client_id = socket.assigns.client_id
-    client = supervisor |> RsmpSupervisor.client(client_id)
+    client = RsmpSupervisor.client(client_id)
     assign(socket, client: client)
   end
 
@@ -38,11 +35,10 @@ defmodule RsmpWeb.SupervisorLive.Client do
 
   @impl true
   def handle_event("alarm", %{"path" => path, "flag" => flag, "value" => value}, socket) do
-    supervisor = socket.assigns.supervisor
     client_id = socket.assigns.client_id
     new_value = value == "false"
 
-    RsmpSupervisor.set_alarm_flag(supervisor, client_id, path, flag, new_value)
+    RsmpSupervisor.set_alarm_flag(client_id, path, flag, new_value)
     {:noreply, socket |> assign_client()}
   end
 
@@ -50,8 +46,7 @@ defmodule RsmpWeb.SupervisorLive.Client do
   def handle_event("command", %{"path" => _path, "value" => plan}, socket) do
     plan = String.to_integer(plan)
     client_id = socket.assigns[:client_id]
-    supervisor = socket.assigns.supervisor
-    supervisor |> RsmpSupervisor.set_plan(client_id, plan)
+    RsmpSupervisor.set_plan(client_id, plan)
     {:noreply, assign(socket, response: "…")}
   end
 

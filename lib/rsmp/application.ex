@@ -16,8 +16,8 @@ defmodule Rsmp.Application do
       {Finch, name: Rsmp.Finch},
       # Start the Endpoint (http/https)
       RsmpWeb.Endpoint,
-      # Start a worker by calling: Rsmp.Worker.start_link(arg)
-      # {Rsmp.Worker, arg}
+      # Start or registry
+      {Registry, keys: :unique, name: RsmpRegistry},
       # Start our RSMP supervisor
       RsmpSupervisor
     ]
