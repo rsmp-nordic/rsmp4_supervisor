@@ -1,5 +1,5 @@
-defmodule RsmpWeb.SupervisorLive.Client do
-  use RsmpWeb, :live_view
+defmodule RSMPWeb.SupervisorLive.Client do
+  use RSMPWeb, :live_view
   use Phoenix.Component
 
   require Logger
@@ -9,11 +9,11 @@ defmodule RsmpWeb.SupervisorLive.Client do
     # note that mount is called twice, once for the html request,
     # then for the liveview websocket connection
     if connected?(socket) do
-      Phoenix.PubSub.subscribe(Rsmp.PubSub, "rsmp")
+      Phoenix.PubSub.subscribe(RSMP.PubSub, "rsmp")
     end
 
     client_id = params["client_id"]
-    client = Rsmp.Supervisor.client(client_id)
+    client = RSMP.Supervisor.client(client_id)
 
     {:ok,
      assign(socket,
@@ -27,7 +27,7 @@ defmodule RsmpWeb.SupervisorLive.Client do
 
   def assign_client(socket) do
     client_id = socket.assigns.client_id
-    client = Rsmp.Supervisor.client(client_id)
+    client = RSMP.Supervisor.client(client_id)
     assign(socket, client: client)
   end
 
@@ -38,7 +38,7 @@ defmodule RsmpWeb.SupervisorLive.Client do
     client_id = socket.assigns.client_id
     new_value = value == "false"
 
-    Rsmp.Supervisor.set_alarm_flag(client_id, path, flag, new_value)
+    RSMP.Supervisor.set_alarm_flag(client_id, path, flag, new_value)
     {:noreply, socket |> assign_client()}
   end
 
@@ -46,7 +46,7 @@ defmodule RsmpWeb.SupervisorLive.Client do
   def handle_event("command", %{"path" => _path, "value" => plan}, socket) do
     plan = String.to_integer(plan)
     client_id = socket.assigns[:client_id]
-    Rsmp.Supervisor.set_plan(client_id, plan)
+    RSMP.Supervisor.set_plan(client_id, plan)
     {:noreply, assign(socket, response: "…")}
   end
 

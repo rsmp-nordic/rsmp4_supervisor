@@ -1,5 +1,5 @@
-defmodule RsmpWeb.SupervisorLive.Index do
-  use RsmpWeb, :live_view
+defmodule RSMPWeb.SupervisorLive.Index do
+  use RSMPWeb, :live_view
   use Phoenix.Component
 
   require Logger
@@ -23,8 +23,8 @@ defmodule RsmpWeb.SupervisorLive.Index do
   end
 
   def connected_mount(_params, _session, socket) do
-    Phoenix.PubSub.subscribe(Rsmp.PubSub, "rsmp")
-    clients = Rsmp.Supervisor.clients()
+    Phoenix.PubSub.subscribe(RSMP.PubSub, "rsmp")
+    clients = RSMP.Supervisor.clients()
 
     {:ok,
      assign(socket,
@@ -44,7 +44,7 @@ defmodule RsmpWeb.SupervisorLive.Index do
         %{"client-id" => client_id, "path" => path, "flag" => flag, "value" => value},
         socket
       ) do
-    Rsmp.Supervisor.set_alarm_flag(
+    RSMP.Supervisor.set_alarm_flag(
       client_id,
       path,
       flag,
@@ -83,7 +83,7 @@ defmodule RsmpWeb.SupervisorLive.Index do
 
   @impl true
   def handle_info(%{topic: "alarm", id: _id, path: _path, alarm: _alarm}, socket) do
-    clients = Rsmp.Supervisor.clients() |> sort_clients()
+    clients = RSMP.Supervisor.clients() |> sort_clients()
 
     {:noreply, assign(socket, clients: clients)}
   end

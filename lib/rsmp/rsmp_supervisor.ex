@@ -1,4 +1,4 @@
-defmodule Rsmp.Supervisor do
+defmodule RSMP.Supervisor do
   use GenServer
   require Logger
 
@@ -146,7 +146,7 @@ defmodule Rsmp.Supervisor do
       alarm: supervisor.clients[client_id].alarms[path]
     }
 
-    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
+    Phoenix.PubSub.broadcast(RSMP.PubSub, "rsmp", data)
 
     {:noreply, supervisor}
   end
@@ -187,7 +187,7 @@ defmodule Rsmp.Supervisor do
       }
     }
 
-    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
+    Phoenix.PubSub.broadcast(RSMP.PubSub, "rsmp", data)
 
     {:noreply, supervisor}
   end
@@ -203,7 +203,7 @@ defmodule Rsmp.Supervisor do
 
     # Logger.info("#{id}: Online: #{online}")
     data = %{topic: "clients", clients: clients}
-    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
+    Phoenix.PubSub.broadcast(RSMP.PubSub, "rsmp", data)
     {:noreply, %{supervisor | clients: clients}}
   end
 
@@ -222,7 +222,7 @@ defmodule Rsmp.Supervisor do
 
     Logger.info("RSMP: #{id}: Received status #{path}: #{status} from #{id}")
     data = %{topic: "status", clients: clients}
-    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
+    Phoenix.PubSub.broadcast(RSMP.PubSub, "rsmp", data)
     {:noreply, %{supervisor | clients: clients}}
   end
 
@@ -241,7 +241,7 @@ defmodule Rsmp.Supervisor do
 
     Logger.info("RSMP: #{id}: Received alarm #{path}: #{inspect(status)} from #{id}")
     data = %{topic: "alarm", clients: clients}
-    Phoenix.PubSub.broadcast(Rsmp.PubSub, "rsmp", data)
+    Phoenix.PubSub.broadcast(RSMP.PubSub, "rsmp", data)
     {:noreply, %{supervisor | clients: clients}}
   end
 
